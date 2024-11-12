@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import numpy as np
 
-input = '44L.mat'
+input = 'knee.mat'
 rawData = sio.loadmat(input)
 img3D = rawData['imgReconTyger2D'][0]
 print(img3D.shape)
