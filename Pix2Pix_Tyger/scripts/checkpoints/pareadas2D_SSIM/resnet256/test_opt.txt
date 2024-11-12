@@ -1,0 +1,47 @@
+----------------- Options ---------------
+             aspect_ratio: 1.0                           
+               batch_size: 1                             
+          checkpoints_dir: ./checkpoints/pareadas2D_SSIM 
+                crop_size: 256                           
+                 dataroot: datasets/pareadas2D           
+             dataset_mode: individual                    
+                direction: BtoA                          
+          display_winsize: 256                           
+                    epoch: latest                        
+                     eval: False                         
+                  gpu_ids: -1                            
+                init_gain: 0.02                          
+                init_type: normal                        
+                    input: testpix.bin                   	[default: None]
+                 input_nc: 1                             
+                  isTrain: False                         	[default: None]
+                load_iter: 0                             	[default: 0]
+                load_size: 256                           
+         max_dataset_size: inf                           
+                    model: pix2pix                       
+       model_augmentation: 2                             
+              model_noise: 1                             
+              model_shape: 256                           
+               n_layers_D: 3                             
+                     name: resnet256                     
+                      ndf: 64                            
+                     netD: basic                         
+                     netG: resnet_9blocks                
+                      ngf: 64                            
+               no_dropout: False                         
+                  no_flip: False                         
+              noise_level: 1000                          
+                     norm: batch                         
+                 num_test: 50                            
+              num_threads: 4                             
+                   output: None                          
+                output_nc: 1                             
+                    phase: test                          
+               preprocess: resize_and_crop               
+              results_dir: ./results/                    
+           serial_batches: False                         
+                   suffix:                               
+                use_wandb: False                         
+                  verbose: False                         
+       wandb_project_name: CycleGAN-and-pix2pix          
+----------------- End -------------------
