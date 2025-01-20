@@ -5,6 +5,7 @@ from typing import BinaryIO, Iterable, Union
 import mrd
 import matplotlib.pyplot as plt
 from bart_marcos import bart_marcos2D
+import cupy as cp 
 
 def acquisition_reader(input: Iterable[mrd.StreamItem]) -> Iterable[mrd.Acquisition]:
     for item in input:
@@ -162,6 +163,27 @@ def mrdRecon(reconMode: str, bartMode: str, artMode:str, #metric: str,weight: st
                         n = 0
                         print("ART iteration %i: %i %%" % (iteration + 1, m))
             return rho
+
+        def art_gpu(kx, ky, x, y, s, rho, lbda, n_iter, index):
+            n = 0
+            n_samples = len(s)
+            m = 0
+            for iteration in range(n_iter):
+                cp.random.shuffle(index)
+                for jj in range(n_samples):
+                    ii = index[jj]
+                    x0 = cp.exp(-1j * 2 * cp.pi * (kx[ii] * x + ky[ii] * y))
+                    x1 = (x0.T @ rho) - s[ii]
+                    x2 = x1 * cp.conj(x0) / (cp.conj(x0.T) @ x0)
+                    d_rho = lbda * x2
+                    rho -= d_rho
+                    n += 1
+                    if n / n_samples > 0.01:
+                        m += 1
+                        n = 0
+                        print("ART iteration %i: %i %%" % (iteration + 1, m))
+
+            return rho
         
         nPoints = np.zeros([1,3])
         fov = np.zeros([1,3])
@@ -188,6 +210,18 @@ def mrdRecon(reconMode: str, bartMode: str, artMode:str, #metric: str,weight: st
             imgART = np.reshape(imgART, (1,1,nPoints[0,1],nPoints[0,0]))
         elif artMode == 'art':
             imgART= art_cpu(kRd,kPh, sRD, sPH,kSpace2D, rho,lbda, n_iter, index)
+            imgART = np.reshape(imgART, (1,1,nPoints[0,1],nPoints[0,0]))
+        elif artMode == 'art_gpu':
+            kRd_gpu = cp.asarray(kRd)
+            kPh_gpu = cp.asarray(kPh)
+            sRD_gpu = cp.asarray(sRD)
+            sPH_gpu = cp.asarray(sPH)
+            kSpace2D_gpu = cp.asarray(kSpace2D)
+            index_gpu = cp.asarray(index)
+            rho_gpu = cp.asarray(rho)
+
+            imgART_gpu= art_gpu(kRd_gpu,kPh_gpu, sRD_gpu, sPH_gpu,kSpace2D_gpu, rho_gpu,lbda, n_iter, index_gpu)
+            imgART = cp.asnumpy(imgART_gpu)
             imgART = np.reshape(imgART, (1,1,nPoints[0,1],nPoints[0,0]))
         imgART = np.abs(imgART).astype(np.float32)
         return imgART
