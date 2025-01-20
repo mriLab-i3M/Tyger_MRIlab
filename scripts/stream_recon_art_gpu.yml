@@ -20,4 +20,4 @@ job:
     resources:
       requests:
         cpu: 1
-        gpu: 1
+      gpu: 1
