@@ -1,6 +1,6 @@
 job:
   codespec:
-    image: test_may3:latest
+    image: test_june:latest
     buffers:
       inputs:
         - input
@@ -8,12 +8,12 @@ job:
         - output
     args:
       - python3
-      - stream_recon_i3m_RARE_may.py
+      - stream_recon_i3m_RARE.py
       - -i
       - $(INPUT_PIPE)
       - -o
       - $(OUTPUT_PIPE) 
-      - sign
+      - -s
       - "[-1,-1,-1,1,1]"
       - -r
       - 'art'

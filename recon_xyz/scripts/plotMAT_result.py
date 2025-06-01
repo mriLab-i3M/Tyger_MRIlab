@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import numpy as np
 
-input = '/home/tyger/tyger_repo_may/brainIR.mat'
+input = '/home/teresa/marcos_tyger/Brain_Images/brainIR.mat'
 rawData = sio.loadmat(input)
-img3D = rawData['imgReconTygerTestJune'][0]
+img3D = rawData['imgReconTyger'][0]
 print(img3D.shape)
 # print(np.max(img3D))
 
@@ -25,4 +25,4 @@ for i in range(38):
     ax1.imshow(imgAux,cmap='gray')
 
 plt.show()
-plt.savefig('/home/tyger/tyger_repo_may/Tyger_MRIlab/resultTESTJune4.png')
+# plt.savefig('/home/tyger/tyger_repo_may/Tyger_MRIlab/resultTESTJune4.png')

@@ -13,20 +13,20 @@ Here are some examples of use.
 
 1. **FFT**:
     ```bash
-    python3 recon_xyz/scripts/fromMATtoMRD3D_RARE_may.py -i 'brainIR.mat' | tyger run exec -f recon_xyz/scripts/stream_recon_FFT_gpu.yml | python3 recon_xyz/scripts/fromMRDtoMAT3D.py -o 'brainIR.mat'
+    python3 recon_xyz/scripts/fromMATtoMRD3D_RARE.py -i 'brainIR.mat' | tyger run exec -f recon_xyz/scripts/stream_recon_FFT_gpu.yml | python3 recon_xyz/scripts/fromMRDtoMAT3D.py -o 'brainIR.mat'
 
     ```
 2. **ART**: 
     ```bash
-    python3 recon_xyz/scripts/fromMATtoMRD3D_RARE_may.py -i 'brainIR.mat' | tyger run exec -f recon_xyz/scripts/stream_recon_ART_gpu.yml | python3 recon_xyz/scripts/fromMRDtoMAT3D.py -o 'brainIR.mat'
+    python3 recon_xyz/scripts/fromMATtoMRD3D_RARE.py -i 'brainIR.mat' | tyger run exec -f recon_xyz/scripts/stream_recon_ART_gpu.yml | python3 recon_xyz/scripts/fromMRDtoMAT3D.py -o 'brainIR.mat'
     ```
 3. **ART PK Bo**: 
     ```bash
-    python3 recon_xyz/scripts/fromMATtoMRD3D_RARE_may.py -i 'brainIR.mat' | tyger run exec -f recon_xyz/scripts/stream_recon_ARTPK_gpu.yml | python3 recon_xyz/scripts/fromMRDtoMAT3D.py -o 'brainIR.mat'
+    python3 recon_xyz/scripts/fromMATtoMRD3D_RARE.py -i 'brainIR.mat' | tyger run exec -f recon_xyz/scripts/stream_recon_ARTPK_gpu.yml | python3 recon_xyz/scripts/fromMRDtoMAT3D.py -o 'brainIR.mat'
     ```
 4. **Conjugate Phase**: 
     ```bash
-    python3 recon_xyz/scripts/fromMATtoMRD3D_RARE_may.py -i 'brainIR.mat' | tyger run exec -f recon_xyz/scripts/stream_recon_CP_gpu.yml | python3 recon_xyz/scripts/fromMRDtoMAT3D.py -o 'brainIR.mat'
+    python3 recon_xyz/scripts/fromMATtoMRD3D_RARE.py -i 'brainIR.mat' | tyger run exec -f recon_xyz/scripts/stream_recon_CP_gpu.yml | python3 recon_xyz/scripts/fromMRDtoMAT3D.py -o 'brainIR.mat'
     ```
 
 
