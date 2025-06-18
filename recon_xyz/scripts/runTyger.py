@@ -7,7 +7,8 @@ import numpy as np
 from matplotlib.widgets import Slider
 
 nSlice = 16
-rawData = "/home/teresa/marcos_tyger/Next1_10.06/RarePyPulseq.2025.06.10.13.03.32.887.mat"   # [2,1,0] OK
+rawData = "/home/teresa/marcos_tyger/Brain_Images/brainIR.mat"
+# rawData = "/home/teresa/marcos_tyger/Next1_10.06/RarePyPulseq.2025.06.10.13.03.32.887.mat"   # [2,1,0] OK
 # rawData = "/home/teresa/marcos_tyger/Next1_10.06/RarePyPulseq.2025.06.10.13.18.00.752.mat"   # [2,1,0] OK 120,120,28
 # rawData = "/home/teresa/marcos_tyger/Next1_10.06/RarePyPulseq.2025.06.10.13.05.56.797.mat"     # [1,2,0] 120,28,120
 # rawData = "/home/teresa/marcos_tyger/Next1_10.06/RarePyPulseq.2025.06.10.13.08.21.374.mat"     # [1,0,2] 28,120,120
@@ -26,10 +27,16 @@ p1 = subprocess.Popen(
 
 # Paso 2: Tyger
 p2 = subprocess.Popen(
-    ["tyger", "run", "exec", "-f", "recon_xyz/scripts/stream_recon_CP_gpu_next1June11.yml"],
+    ["tyger", "run", "exec", "-f", "recon_xyz/scripts/stream_recon_CP_gpu_next1June10_Brain.yml"],
     stdin=p1.stdout,
     stdout=subprocess.PIPE
 )
+
+# p2 = subprocess.Popen(
+#     ["tyger", "run", "exec", "-f", "recon_xyz/scripts/stream_recon_CP_gpu_next1June10_Brain.yml"],
+#     stdin=p1.stdout,
+#     stdout=subprocess.PIPE
+# )
 
 p1.stdout.close()
 p1.wait()  # <-- Esperamos a que termine p1
@@ -108,13 +115,13 @@ plt.show()
 # ax1.axis('off')  
 # ax1.set_title('Original')
 
-# ax2.imshow(img3D_tyger[:,nSlice,:], cmap='gray')
+# ax2.imshow(img3D_tyger[:,:,nSlice], cmap='gray')
 # ax2.axis('off')
 # ax2.set_title('Tyger')
 
 # plt.tight_layout()
 # plt.savefig('compTyger.png', bbox_inches='tight', dpi=300)
-# # plt.show()
+# plt.show()
 
 # plt.figure(figsize = (5,8), dpi=240)
 # gs1 = gridspec.GridSpec(5,8)

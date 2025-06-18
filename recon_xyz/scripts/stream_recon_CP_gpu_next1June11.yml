@@ -1,6 +1,6 @@
 job:
   codespec:
-    image: test_june2:latest
+    image: test2_june:latest
     buffers:
       inputs:
         - input
