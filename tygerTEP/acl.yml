@@ -1,0 +1,15 @@
+kind: accessControl
+
+tenantId: be4655df-ac73-401f-a7ae-198c3b72d0c6
+apiAppUri: api://tyger-server-i3m
+cliAppUri: api://tyger-cli-i3m
+
+apiAppId: f277423f-4d1e-4f11-ba84-563ab8047869 # `tyger access-control apply` will fill in this value
+cliAppId: c4c7064d-06ab-429f-acfa-31f110fe3611 # `tyger access-control apply` will fill in this value
+
+roleAssignments:
+  owner:
+    - kind: User
+      userPrincipalName: tguanav@upv.edu.es
+      objectId: b31fc7ba-c8fb-4284-b195-8d0825ad480e
+  contributor: []
