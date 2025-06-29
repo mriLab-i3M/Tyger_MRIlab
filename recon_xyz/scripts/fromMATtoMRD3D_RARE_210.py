@@ -8,24 +8,19 @@ import matplotlib.pyplot as plt
 import sys
 
 def matToMRD(input, output_file):
-    print('From MAT to MRD...')
     
-    # OUTPUT - write .mrd
+    # OUTPUT
     output = sys.stdout.buffer
     if output_file is not None:
         output = output_file
-        
     # INPUT - Read .mat
     mat_data = sio.loadmat(input)
-    
-    # Head info
     axesOrientation = mat_data['axesOrientation'][0]
     print('axesOrientation',  axesOrientation)
     nPoints = mat_data['nPoints'][0]    # rd, ph, sl
-    nPoints_sig = nPoints[[2,1,0]] # sl, ph, rd (signal is shorted like this)
     print('nPoints',  nPoints)
-    inverse_axesOrientation = np.argsort(axesOrientation)   
-    nXYZ = nPoints[inverse_axesOrientation]  # x, y, z
+    nXYZ = nPoints[axesOrientation]     # x, y, z
+    nPoints_sig = nPoints[[2,1,0]]
     print('nXYZ',  nXYZ)
     nPoints = [int(x) for x in nPoints]; nXYZ = [int(x) for x in nXYZ]; axesOrientation = [int(x) for x in axesOrientation]
     nPoints_sig = [int(x) for x in nPoints_sig]
@@ -41,21 +36,18 @@ def matToMRD(input, output_file):
     fov_adq = fov_adq
     fov_adq = fov_adq.astype(np.float32); fov_adq = [int(x) for x in fov_adq] # mm; x, y, z
     dfov = mat_data['dfov'][0]; dfov = dfov.astype(np.float32)  # mm; x, y, z
-    acqTime = mat_data['acqTime'][0]*1e-3 # s
+    acqTime = mat_data['acqTime'][0]*1e-3 #s
     print(fov)
     print(axesOrientation)
     print('fov_adq: ',fov_adq)
-    print('dfov: ', dfov)
     
-    # Signal vector
     sampledCartesian = mat_data['sampledCartesian']
     signal = sampledCartesian[:,3]         
     kSpace = np.reshape(signal, nPoints_sig) # sl, ph, rd
     kSpace = np.reshape(kSpace, (1,kSpace.shape[0],kSpace.shape[1], kSpace.shape[2])) # Expand to MRD requisites
 
-    # k vectors
     kTrajec = np.real(sampledCartesian[:,0:3]).astype(np.float32)    # rd, ph, sl
-    kTrajec = kTrajec[:,inverse_axesOrientation]    # x, y, z
+    kTrajec = kTrajec[:,axesOrientation]    # x, y, z
 
     kx = kTrajec[:,0]; kx = np.reshape(kx, nPoints_sig)   # sl, ph, rd    
     kx = np.reshape(kx, (1,kx.shape[0],kx.shape[1], kx.shape[2]))
@@ -70,21 +62,22 @@ def matToMRD(input, output_file):
     rdTimes = np.reshape(rdTimes, (1,1,1, rdTimes.shape[0]))
 
     # Position vectors
-    # rd_pos = np.linspace(-fov_adq[0] / 2 + fov_adq[0] / (2 * nPoints[0]) , fov_adq[0] / 2 + fov_adq[0] / (2 * nPoints[0]), nPoints[0], endpoint=False)
-    # ph_pos = np.linspace(-fov_adq[1] / 2 + fov_adq[1] / (2 * nPoints[1]) , fov_adq[1] / 2 + fov_adq[1] / (2 * nPoints[1]), nPoints[1], endpoint=False)
-    # sl_pos = np.linspace(-fov_adq[2] / 2 + fov_adq[2] / (2 * nPoints[2]) , fov_adq[2] / 2 + fov_adq[2] / (2 * nPoints[2]), nPoints[2], endpoint=False)
-    rd_pos = np.linspace(-fov_adq[0] / 2 , fov_adq[0] / 2 , nPoints[0], endpoint=False)
-    ph_pos = np.linspace(-fov_adq[1] / 2 , fov_adq[1] / 2 , nPoints[1], endpoint=False)
-    sl_pos = np.linspace(-fov_adq[2] / 2 , fov_adq[2] / 2 , nPoints[2], endpoint=False)
-    ph_posFull, sl_posFull, rd_posFull = np.meshgrid(ph_pos, sl_pos, rd_pos)
+    rd_pos = np.linspace(-fov_adq[0] / 2 + fov_adq[0] / (2 * nPoints[0]) , fov_adq[0] / 2 + fov_adq[0] / (2 * nPoints[0]), nPoints[0], endpoint=False)
+    ph_pos = np.linspace(-fov_adq[1] / 2 + fov_adq[1] / (2 * nPoints[1]) , fov_adq[1] / 2 + fov_adq[1] / (2 * nPoints[1]), nPoints[1], endpoint=False)
+    sl_pos = np.linspace(-fov_adq[2] / 2 + fov_adq[2] / (2 * nPoints[2]) , fov_adq[2] / 2 + fov_adq[2] / (2 * nPoints[2]), nPoints[2], endpoint=False)
+    # ph_posFull, sl_posFull, rd_posFull = np.meshgrid(ph_pos, sl_pos, rd_pos)
+    rd_posFull, ph_posFull, sl_posFull = np.meshgrid(rd_pos, ph_pos, sl_pos)    # [2,1,0]
+    # ph_posFull, rd_posFull, sl_posFull = np.meshgrid(ph_pos, rd_pos, sl_pos)    # [1,2,0]
+    # rd_posFull = np.reshape(rd_posFull, newshape=(1, nPoints[0] * nPoints[1] * nPoints[2]))
+    # ph_posFull = np.reshape(ph_posFull, newshape=(1, nPoints[0] * nPoints[1] * nPoints[2]))
+    # sl_posFull = np.reshape(sl_posFull, newshape=(1, nPoints[0] * nPoints[1] * nPoints[2]))
     rd_posFull = np.reshape(rd_posFull, newshape=(nPoints[0] * nPoints[1] * nPoints[2], 1))
     ph_posFull = np.reshape(ph_posFull, newshape=(nPoints[0] * nPoints[1] * nPoints[2], 1))
     sl_posFull = np.reshape(sl_posFull, newshape=(nPoints[0] * nPoints[1] * nPoints[2], 1))
     xyz_matrix = np.concatenate((rd_posFull, ph_posFull, sl_posFull), axis=1) # rd, ph, sl
+    xyz_matrix = xyz_matrix[:,axesOrientation]    # x, y, z
+    np.save('xyz_matrix2.npy', xyz_matrix)
     print('xyz_matrix: ', xyz_matrix[0])
-    xyz_matrix = xyz_matrix[:,inverse_axesOrientation]   # x, y, z
-    print('xyz_matrix: ', xyz_matrix[0])
-    
     x_esp = xyz_matrix[:,0]; x_esp = np.reshape(x_esp, nPoints_sig)   # sl, ph, rd    
     x_esp = np.reshape(x_esp, (1,x_esp.shape[0],x_esp.shape[1], x_esp.shape[2]))
 
@@ -94,7 +87,6 @@ def matToMRD(input, output_file):
     z_esp = xyz_matrix[:,2]; z_esp = np.reshape(z_esp, nPoints_sig)   # sl, ph, rd       
     z_esp = np.reshape(z_esp, (1,z_esp.shape[0],z_esp.shape[1], z_esp.shape[2]))
     
-    # OUTPUT - write .mrd
     # MRD Format
     h = mrd.Header()
 
@@ -119,29 +111,20 @@ def matToMRD(input, output_file):
     readout_gradient = mrd.UserParameterDoubleType()
     readout_gradient.name = "readout_gradient_intensity"
     readout_gradient.value = rdGradAmplitude
-    
-    axes_param = mrd.UserParameterStringType()
-    axes_param.name = "axesOrientation"
-    axes_param.value = ",".join(map(str, axesOrientation))  
-    
-    d_fov = mrd.UserParameterStringType()
-    d_fov.name = "dfov"
-    d_fov.value = ",".join(map(str, dfov))  
-    
     if h.user_parameters is None:
         h.user_parameters = mrd.UserParametersType()
     h.user_parameters.user_parameter_double.append(readout_gradient)
-    h.user_parameters.user_parameter_string.append(axes_param)
-    h.user_parameters.user_parameter_string.append(d_fov)
+
 
     def generate_data() -> Generator[mrd.StreamItem, None, None]:
         acq = mrd.Acquisition()
 
         acq.data.resize((1, nPoints[0]))
         acq.trajectory.resize((7, nPoints[0]))
-        # acq.channel_order = axesOrientation
+        acq.channel_order = axesOrientation
         acq.center_sample = round(nPoints[0] / 2)
-        # acq.position = dfov
+        acq.position = dfov
+        print('nPoints: ', nPoints)
         for s in range(nPoints[2]):
             for line in range(nPoints[1]):
 
@@ -167,7 +150,6 @@ def matToMRD(input, output_file):
                 acq.trajectory[4,:] = x_esp[:, s, line, :]
                 acq.trajectory[5,:] = y_esp[:, s, line, :]
                 acq.trajectory[6,:] = z_esp[:, s, line, :]
-                
                 yield mrd.StreamItem.Acquisition(acq)
 
     with mrd.BinaryMrdWriter(output) as w:
@@ -180,8 +162,7 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', type=str, required=False, help="Output MRD file")
 
     # parser.set_defaults(
-    #     # input = '/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.05.56.797.mat',
-    #     input = '/home/tyger/tyger_repo_may/Next1dFOV_23/RarePyPulseq.2025.06.23.11.25.55.307.mat',
+    #     input = '/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.05.56.797.mat',
     #     output= '/home/tyger/tyger_repo_may/Next1_10.06/testMRDtoMAT_021.bin',
     # )
     

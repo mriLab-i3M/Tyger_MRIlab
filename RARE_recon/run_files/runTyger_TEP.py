@@ -5,21 +5,18 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import numpy as np 
 from matplotlib.widgets import Slider
-import yaml
+import matplotlib
+# matplotlib.use('TkAgg')
 
 nSlice = 16
-# rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.03.32.887.mat"   # [2,1,0] OK
-# rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.18.00.752.mat"   # [2,1,0] OK 120,120,28
-# rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.05.56.797.mat"     # [1,2,0] 120,28,120
-# rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.08.21.374.mat"     # [1,0,2] 28,120,120
-# rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.10.48.496.mat"     # [0,1,2] 28,120,120
-# rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.13.13.566.mat"     # [0,2,1] 120,28,120
-# rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.15.36.936.mat"     # [2,0,1] 120,120,28
-
-# rawData = '/home/tyger/Tyger_MRIlab/tyger3D/rawDatas/physio1/T1_1,0_RarePyPulseq.2025.04.17.11.59.59.428.mat'
-
-rawData = '/home/tyger/tyger_repo_may/Next1dFOV_23/RarePyPulseq.2025.06.23.11.38.38.880.mat'
-
+rawData = "/home/teresa/BrainImages/brainIR.mat"
+# rawData = "/home/teresa/marcos_tyger/Next1_10.06/RarePyPulseq.2025.06.10.13.03.32.887.mat"   # [2,1,0] OK
+# rawData = "/home/teresa/marcos_tyger/Next1_10.06/RarePyPulseq.2025.06.10.13.18.00.752.mat"   # [2,1,0] OK 120,120,28
+# rawData = "/home/teresa/marcos_tyger/Next1_10.06/RarePyPulseq.2025.06.10.13.05.56.797.mat"     # [1,2,0] 120,28,120
+# rawData = "/home/teresa/marcos_tyger/Next1_10.06/RarePyPulseq.2025.06.10.13.08.21.374.mat"     # [1,0,2] 28,120,120
+# rawData = "/home/teresa/marcos_tyger/Next1_10.06/RarePyPulseq.2025.06.10.13.10.48.496.mat"     # [0,1,2] 28,120,120
+# rawData = "/home/teresa/marcos_tyger/Next1_10.06/RarePyPulseq.2025.06.10.13.13.13.566.mat"     # [0,2,1] 120,28,120
+# rawData = "/home/teresa/marcos_tyger/Next1_10.06/RarePyPulseq.2025.06.10.13.15.36.936.mat"     # [2,0,1] 120,120,28
 # Tiempo total
 start_total = time.time()
 
@@ -30,19 +27,18 @@ p1 = subprocess.Popen(
     stdout=subprocess.PIPE
 )
 
-# Paso 2: Código python que ejecutaré desde Tyger
-yml_path = "recon_xyz/scripts/stream_recon_CP_gpu_next1_June21_python.yml"
-# yml_path = "recon_xyz/scripts/stream_recon_CP_gpu_next1_Physio1.yml"
-with open(yml_path, "r") as f:
-    config = yaml.safe_load(f)
-
-args = config["args"]
-
+# Paso 2: Tyger
 p2 = subprocess.Popen(
-    ["python3", "recon_xyz/scripts/stream_recon_i3m_CP_ART_2.py"]+args,
+    ["tyger", "run", "exec", "-f", "recon_xyz/scripts/stream_recon_CP_gpu_next1June10_Brain_TEP.yml"],
     stdin=p1.stdout,
     stdout=subprocess.PIPE
 )
+
+# p2 = subprocess.Popen(
+#     ["tyger", "run", "exec", "-f", "recon_xyz/scripts/stream_recon_CP_gpu_next1June10_Brain.yml"],
+#     stdin=p1.stdout,
+#     stdout=subprocess.PIPE
+# )
 
 p1.stdout.close()
 p1.wait()  # <-- Esperamos a que termine p1
@@ -72,48 +68,48 @@ print(f"Tiempo total del proceso: {total_duration:.2f} segundos")
 
 rawData_pos = sio.loadmat(rawData)
 print('AxesOrientation: ', rawData_pos['axesOrientation'])
-print('dFov: ', rawData_pos['dfov'])
 img3D_tyger = rawData_pos['imgReconTyger'][0]
 print('Tyger img shape: ',img3D_tyger.shape)
 img3D_or = np.abs(rawData_pos['image3D'])
 img3D_or = np.transpose(img3D_or, [0,2,1])
 
-# # PLOT slicer
-# nSlice1 = img3D_or.shape[0] // 2
-# nSlice2 = img3D_tyger.shape[2] // 2
+# PLOT slicer
+nSlice1 = img3D_or.shape[0] // 2
+nSlice2 = img3D_tyger.shape[2] // 2
 
-# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
-# plt.subplots_adjust(bottom=0.25) 
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+plt.subplots_adjust(bottom=0.25) 
 
-# im1 = ax1.imshow(img3D_or[nSlice1, :, :], cmap='gray')
-# ax1.axis('off')
-# ax1.set_title('Original')
+im1 = ax1.imshow(img3D_or[nSlice1, :, :], cmap='gray')
+ax1.axis('off')
+ax1.set_title('Original')
 
-# im2 = ax2.imshow(img3D_tyger[:,:, nSlice2], cmap='gray')
-# ax2.axis('off')
-# ax2.set_title('Tyger')
+im2 = ax2.imshow(img3D_tyger[:,:, nSlice2], cmap='gray')
+ax2.axis('off')
+ax2.set_title('Tyger')
 
-# # Sliders
-# ax_slider1 = plt.axes([0.15, 0.1, 0.3, 0.03])
-# slider1 = Slider(ax_slider1, '', 0, img3D_or.shape[0]-1, valinit=nSlice1, valfmt='%d')
+# Sliders OP 1 
+ax_slider1 = plt.axes([0.15, 0.1, 0.3, 0.03])
+slider1 = Slider(ax_slider1, '', 0, img3D_or.shape[0]-1, valinit=nSlice1, valfmt='%d')
 
-# ax_slider2 = plt.axes([0.55, 0.1, 0.3, 0.03])
-# slider2 = Slider(ax_slider2, '', 0, img3D_tyger.shape[2]-1, valinit=nSlice2, valfmt='%d')
+ax_slider2 = plt.axes([0.55, 0.1, 0.3, 0.03])
+slider2 = Slider(ax_slider2, '', 0, img3D_tyger.shape[2]-1, valinit=nSlice2, valfmt='%d')
 
-# def update1(val):
-#     idx = int(slider1.val)
-#     im1.set_data(img3D_or[idx, :, :])
-#     fig.canvas.draw_idle()
+def update1(val):
+    idx = int(slider1.val)
+    im1.set_data(img3D_or[idx, :, :])
+    fig.canvas.draw_idle()
 
-# def update2(val):
-#     idx = int(slider2.val)
-#     im2.set_data(img3D_tyger[:, :, idx])
-#     fig.canvas.draw_idle()
+def update2(val):
+    idx = int(slider2.val)
+    im2.set_data(img3D_tyger[:, :, idx])
+    fig.canvas.draw_idle()
 
-# slider1.on_changed(update1)
-# slider2.on_changed(update2)
+slider1.on_changed(update1)
+slider2.on_changed(update2)
 
-# plt.show()
+plt.show()
+
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
 
@@ -121,13 +117,13 @@ ax1.imshow(img3D_or[nSlice,:,:], cmap='gray')
 ax1.axis('off')  
 ax1.set_title('Original')
 
-ax2.imshow(img3D_tyger[:,nSlice,:], cmap='gray')
+ax2.imshow(img3D_tyger[:,:,nSlice], cmap='gray')
 ax2.axis('off')
 ax2.set_title('Tyger')
 
 plt.tight_layout()
-plt.savefig('compTyger.png', bbox_inches='tight', dpi=300)
-# plt.show()
+plt.savefig('compTygerTEP.png', bbox_inches='tight', dpi=300)
+plt.show()
 
 # plt.figure(figsize = (5,8), dpi=240)
 # gs1 = gridspec.GridSpec(5,8)

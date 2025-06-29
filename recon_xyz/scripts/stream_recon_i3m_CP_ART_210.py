@@ -64,6 +64,9 @@ def mrdRecon(sign:str, reconMode: str, artMode:str, BoFit:str,
     kz_buffer = None
     times_buffer = None
     axesOrientation = None
+    x_buffer = None
+    y_buffer = None
+    z_buffer = None
 
     def produce_image(img: np.ndarray) -> Iterable[mrd.Image[np.float32]]:
         mrd_image = mrd.Image[np.float32](image_type=mrd.ImageType.MAGNITUDE, data=img)
@@ -75,6 +78,9 @@ def mrdRecon(sign:str, reconMode: str, artMode:str, BoFit:str,
     ky_buffer = []
     kz_buffer = []
     times_buffer = []
+    x_buffer = []
+    y_buffer = []
+    z_buffer = []
 
     for acq in input:
         if axesOrientation == None:
@@ -89,14 +95,19 @@ def mrdRecon(sign:str, reconMode: str, artMode:str, BoFit:str,
         ky_buffer.append(acq.trajectory[1,:])
         kz_buffer.append(acq.trajectory[2,:])
         times_buffer.append(acq.trajectory[3,:])
+        x_buffer.append(acq.trajectory[4,:])
+        y_buffer.append(acq.trajectory[5,:])
+        z_buffer.append(acq.trajectory[6,:])
 
-    # kSpace_buffer = np.array(kSpace_buffer)
     kSpace_buffer = np.reshape(kSpace_buffer, -1, order='C')
     kx_buffer = np.reshape(kx_buffer, -1, order='C')
     ky_buffer = np.reshape(ky_buffer, -1, order='C')
     kz_buffer= np.reshape(kz_buffer, -1, order='C')
     times_buffer = np.reshape(times_buffer, -1, order='C')
-
+    x_buffer = np.reshape(x_buffer, -1, order='C')*1e-3
+    y_buffer = np.reshape(y_buffer, -1, order='C')*1e-3
+    z_buffer= np.reshape(z_buffer, -1, order='C')*1e-3
+    np.save('x_buffer.npy', x_buffer)
     def pythonfft(kSpace):        
         img = np.fft.ifftshift(np.fft.ifftn(np.fft.ifftshift(kSpace[:, :, :])))
         img = np.reshape(img,(1,img.shape[0],img.shape[1],img.shape[2]))
@@ -110,14 +121,9 @@ def mrdRecon(sign:str, reconMode: str, artMode:str, BoFit:str,
         kx = 2*np.pi*kx_buffer
         ky = 2*np.pi*ky_buffer
         kz = 2*np.pi*kz_buffer
-
-        x_vals = np.linspace(-rFOVx / 2 + rFOVx / (2 * rNx) , rFOVx / 2 + rFOVx / (2 * rNx), rNx)
-        y_vals = np.linspace(-rFOVy / 2 + rFOVy / (2 * rNy) , rFOVy / 2 + rFOVy / (2 * rNy) , rNy)
-        z_vals = np.linspace(-rFOVz / 2 + rFOVz / (2 * rNz) , rFOVz / 2 + rFOVz / (2 * rNz), rNz)
-        x, y, z = np.meshgrid(x_vals, y_vals, z_vals,indexing='ij')
-        x = x.flatten(order='F') 
-        y = y.flatten(order='F')
-        z = z.flatten(order='F')
+        x = x_buffer
+        y = y_buffer
+        z = z_buffer
         
         boFit = eval(f"lambda x, y, z: {BoFit}")
         dBo = boFit(vecSign[0]*x, vecSign[1]*y, vecSign[2]*z)
@@ -201,15 +207,10 @@ def mrdRecon(sign:str, reconMode: str, artMode:str, BoFit:str,
         ky = 2*np.pi*ky_buffer
         kz = 2*np.pi*kz_buffer
 
-        x_vals = np.linspace(-rFOVx / 2 + rFOVx / (2 * rNx) , rFOVx / 2 + rFOVx / (2 * rNx), rNx)
-        y_vals = np.linspace(-rFOVy / 2 + rFOVy / (2 * rNy) , rFOVy / 2 + rFOVy / (2 * rNy) , rNy)
-        z_vals = np.linspace(-rFOVz / 2 + rFOVz / (2 * rNz) , rFOVz / 2 + rFOVz / (2 * rNz), rNz)
-        x, y, z = np.meshgrid(x_vals, y_vals, z_vals,indexing='ij')
-        x = x.flatten(order='F') 
-        y = y.flatten(order='F')
-        z = z.flatten(order='F')
-        np.save('x_vector.npy', x)
-        
+        x = x_buffer
+        y = y_buffer
+        z = z_buffer
+
         boFit = eval(f"lambda x, y, z: {BoFit}")
         dBo = boFit(vecSign[0]*x, vecSign[1]*y, vecSign[2]*z)
         dBo = dBo/rdGradAmplitude
@@ -236,7 +237,7 @@ def mrdRecon(sign:str, reconMode: str, artMode:str, BoFit:str,
                 # if int(i/len(x)*100) != int((i-1)/len(x)*100):
                     # print(int(i/len(x)*100), ' %')
                 x_batch = x[i:i+batch_size]
-                y_batch = y[i:i+batch_size]
+                y_batch = y[i:i+batch_size] 
                 z_batch = z[i:i+batch_size] + dBo[i:i+batch_size]
 
                 phase_batch = cp.exp(vecSign[3]*1j * (cp.outer(kx, x_batch) + cp.outer(ky, y_batch) + cp.outer(kz, z_batch)))
@@ -246,7 +247,8 @@ def mrdRecon(sign:str, reconMode: str, artMode:str, BoFit:str,
 
         imgCP= conjugatePhase(kx_gpu,ky_gpu,kz_gpu,sx_gpu,sy_gpu,sz_gpu,signal_gpu, rho_gpu, dBo_gpu)
         img = cp.asnumpy(imgCP)
-        img = np.reshape(img, (1,rNz,rNy,rNx))
+        img = np.reshape(img, (1,rNz,rNy,rNx))   # [2,1,0]
+        # img = np.reshape(img, (1,rNz,rNx,rNy))  # [1,2,0]
         img = np.abs(img).astype(np.float32)
         # print(img.shape)
         return img
@@ -260,8 +262,6 @@ def mrdRecon(sign:str, reconMode: str, artMode:str, BoFit:str,
     elif reconMode == 'cp':
         imgRecon = pythonCP()
         
-    # imgRecon [1,nSl,nPh, nRd]
-    # print(imgRecon.shape)
     yield from produce_image(imgRecon)
 
 

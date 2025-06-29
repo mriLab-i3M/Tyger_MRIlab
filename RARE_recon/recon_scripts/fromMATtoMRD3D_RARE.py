@@ -4,7 +4,6 @@ import numpy as np
 from typing import Generator
 import mrd
 import scipy.io as sio
-import matplotlib.pyplot as plt
 import sys
 
 def matToMRD(input, output_file):
@@ -20,21 +19,18 @@ def matToMRD(input, output_file):
     
     # Head info
     axesOrientation = mat_data['axesOrientation'][0]
-    print('axesOrientation',  axesOrientation)
     nPoints = mat_data['nPoints'][0]    # rd, ph, sl
     nPoints_sig = nPoints[[2,1,0]] # sl, ph, rd (signal is shorted like this)
-    print('nPoints',  nPoints)
     inverse_axesOrientation = np.argsort(axesOrientation)   
     nXYZ = nPoints[inverse_axesOrientation]  # x, y, z
-    print('nXYZ',  nXYZ)
     nPoints = [int(x) for x in nPoints]; nXYZ = [int(x) for x in nXYZ]; axesOrientation = [int(x) for x in axesOrientation]
     nPoints_sig = [int(x) for x in nPoints_sig]
-    print('axesOrientation',  axesOrientation)
-    print('nPoints',  nPoints)
-    print('nXYZ',  nXYZ)
-    print('nPoints_sig', nPoints_sig)
-    rdGradAmplitude = mat_data['rd_grad_amplitude']
     
+    try: # RAREpp and RARE_double_image
+        rdGradAmplitude = mat_data['rd_grad_amplitude']
+    except: # RAREprotocols
+        rdGradAmplitude = mat_data['rdGradAmplitude']
+        
     fov = mat_data['fov'][0]*1e1; 
     fov_adq = fov[axesOrientation] # rd, ph, sl
     fov = fov.astype(int); fov = [int(x) for x in fov] # mm; x, y, z
@@ -42,8 +38,12 @@ def matToMRD(input, output_file):
     fov_adq = fov_adq.astype(np.float32); fov_adq = [int(x) for x in fov_adq] # mm; x, y, z
     dfov = mat_data['dfov'][0]; dfov = dfov.astype(np.float32)  # mm; x, y, z
     acqTime = mat_data['acqTime'][0]*1e-3 # s
-    print(fov)
-    print(axesOrientation)
+    
+    print('axesOrientation',  axesOrientation)
+    print('nPoints',  nPoints)
+    print('nXYZ',  nXYZ)
+    print('nPoints_sig', nPoints_sig)
+    print('fov:,', fov)
     print('fov_adq: ',fov_adq)
     print('dfov: ', dfov)
     
@@ -81,9 +81,7 @@ def matToMRD(input, output_file):
     ph_posFull = np.reshape(ph_posFull, newshape=(nPoints[0] * nPoints[1] * nPoints[2], 1))
     sl_posFull = np.reshape(sl_posFull, newshape=(nPoints[0] * nPoints[1] * nPoints[2], 1))
     xyz_matrix = np.concatenate((rd_posFull, ph_posFull, sl_posFull), axis=1) # rd, ph, sl
-    print('xyz_matrix: ', xyz_matrix[0])
     xyz_matrix = xyz_matrix[:,inverse_axesOrientation]   # x, y, z
-    print('xyz_matrix: ', xyz_matrix[0])
     
     x_esp = xyz_matrix[:,0]; x_esp = np.reshape(x_esp, nPoints_sig)   # sl, ph, rd    
     x_esp = np.reshape(x_esp, (1,x_esp.shape[0],x_esp.shape[1], x_esp.shape[2]))
@@ -139,9 +137,8 @@ def matToMRD(input, output_file):
 
         acq.data.resize((1, nPoints[0]))
         acq.trajectory.resize((7, nPoints[0]))
-        # acq.channel_order = axesOrientation
         acq.center_sample = round(nPoints[0] / 2)
-        # acq.position = dfov
+
         for s in range(nPoints[2]):
             for line in range(nPoints[1]):
 
@@ -180,9 +177,8 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', type=str, required=False, help="Output MRD file")
 
     # parser.set_defaults(
-    #     # input = '/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.05.56.797.mat',
-    #     input = '/home/tyger/tyger_repo_may/Next1dFOV_23/RarePyPulseq.2025.06.23.11.25.55.307.mat',
-    #     output= '/home/tyger/tyger_repo_may/Next1_10.06/testMRDtoMAT_021.bin',
+    #     input = '',
+    #     output= '',
     # )
     
     args = parser.parse_args()
