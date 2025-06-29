@@ -1,6 +1,6 @@
 job:
   codespec:
-    image: test_june:latest
+    image: ghcr.io/teresaguallartnaval/rare_tyger:latest
     buffers:
       inputs:
         - input
@@ -8,17 +8,15 @@ job:
         - output
     args:
       - python3
-      - stream_recon_i3m_RARE.py
+      - stream_recon_RARE.py
       - -i
       - $(INPUT_PIPE)
       - -o
       - $(OUTPUT_PIPE) 
-      - -s
-      - "[-1,-1,-1,1,1]"
       - -r
       - 'cp'
-      - -artMode
-      - 'art'
+      - -s
+      - "[-1,-1,-1,1,1,1,1,1,1000]"
       - -BoFit
       - >
         1.7958916691214196e-06 + 8.780172101062597e-05*(x**1) + 5.1529384399101336e-05*(y**1) + 5.496867688951115e-06*(z**1) 

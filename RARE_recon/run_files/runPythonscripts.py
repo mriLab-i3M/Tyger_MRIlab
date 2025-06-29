@@ -40,7 +40,7 @@ p1 = subprocess.Popen(
 )
 
 # Paso 2: Código python que ejecutaré desde Tyger
-yml_path = "RARE_recon/yml_files/stream_recon_CP_gpu_next1_python.yml"
+yml_path = "RARE_recon/yml_files/python_next1_june.yml"
 with open(yml_path, "r") as f:
     config = yaml.safe_load(f)
 
