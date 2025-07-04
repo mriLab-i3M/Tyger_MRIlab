@@ -114,20 +114,51 @@ def matToMRD(input, output_file):
             acq.trajectory[2,:] = kz[:, s, :, :]
             
             yield mrd.StreamItem.Acquisition(acq)
+    
+    def generate_data_batches(batch_size: int) -> Generator[mrd.StreamItem, None, None]:
+        acq = mrd.Acquisition()
+
+        for batch_start in range(0, lenT, batch_size):
+            batch_end = min(batch_start + batch_size, lenT)
+            batch_len = batch_end - batch_start
+
+            data_batch = kSpace[:, batch_start:batch_end, :, :]  
+            kx_batch = kx[:, batch_start:batch_end, :, :]
+            ky_batch = ky[:, batch_start:batch_end, :, :]
+            kz_batch = kz[:, batch_start:batch_end, :, :]
+
+            n_points_batch = np.prod(data_batch.shape)
+            
+            acq.data.resize((1, n_points_batch))
+            acq.trajectory.resize((7, n_points_batch))
+            acq.center_sample = round(n_points_batch / 2)
+            
+            acq.data[:] = data_batch.reshape(-1)
+            acq.trajectory[0,:] = kx_batch.reshape(-1)
+            acq.trajectory[1,:] = ky_batch.reshape(-1)
+            acq.trajectory[2,:] = kz_batch.reshape(-1)
+            
+            acq.idx.kspace_encode_step_1 = 1
+            acq.idx.kspace_encode_step_2 = batch_start  
+            acq.idx.slice = batch_start
+            acq.idx.repetition = 0
+
+            yield mrd.StreamItem.Acquisition(acq)
 
     with mrd.BinaryMrdWriter(output) as w:
         w.write_header(h)
-        w.write_data(generate_data())
+        # w.write_data(generate_data())
+        w.write_data(generate_data_batches(1000))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert mat to MRD")
     parser.add_argument('-i', '--input', type=str, required=False, help="Input file path")
     parser.add_argument('-o', '--output', type=str, required=False, help="Output MRD file")
 
-    parser.set_defaults(
-        input = '/home/tyger/tyger_repo_may/PETRA_Phys1/PETRA.2024.12.19.19.38.08.208.mat',
-        output= '/home/tyger/tyger_repo_may/Tyger_MRIlab/CP_ARTPK_ART/recon_scripts/testPETRA.bin',
-    )
+    # parser.set_defaults(
+    #     input = '/home/tyger/tyger_repo_may/PETRA_Phys1/PETRA.2025.06.20.14.10.11.662.mat',
+    #     output= '/home/tyger/tyger_repo_may/Tyger_MRIlab/PETRA_recon/recon_scripts/testPETRA.bin',
+    # )
     
     args = parser.parse_args()
     matToMRD(args.input, args.output)

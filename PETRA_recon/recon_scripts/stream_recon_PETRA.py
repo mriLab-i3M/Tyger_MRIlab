@@ -77,10 +77,15 @@ def mrdRecon(reconMode: str, sign:str, BoFit:str,
         ky_buffer.append(acq.trajectory[1,:])
         kz_buffer.append(acq.trajectory[2,:])
 
-    kSpace_buffer = np.reshape(kSpace_buffer, -1, order='C')
-    kx_buffer = np.reshape(kx_buffer, -1, order='C')
-    ky_buffer = np.reshape(ky_buffer, -1, order='C')
-    kz_buffer= np.reshape(kz_buffer, -1, order='C')
+    # kSpace_buffer = np.reshape(kSpace_buffer, -1, order='C')
+    # kx_buffer = np.reshape(kx_buffer, -1, order='C')
+    # ky_buffer = np.reshape(ky_buffer, -1, order='C')
+    # kz_buffer= np.reshape(kz_buffer, -1, order='C')
+    
+    kSpace_buffer = np.concatenate(kSpace_buffer)
+    kx_buffer = np.concatenate(kx_buffer)
+    ky_buffer = np.concatenate(ky_buffer)
+    kz_buffer = np.concatenate(kz_buffer)
     
     def pythonfft(kSpace):        
         img = np.fft.ifftshift(np.fft.ifftn(np.fft.ifftshift(kSpace[:, :, :])))
@@ -137,7 +142,7 @@ def mrdRecon(reconMode: str, sign:str, BoFit:str,
                             # ii = index[jj]
                             x0 = cp.exp(vecSign[4]*-1j *  (kx[ii] * x + ky[ii] * y + kz[ii] * z))
                             x1 =  s[ii]-(x0.T @ rho)
-                            # x2 = x1 * cp.conj(x0) / (cp.conj(x0.T) @ x0)
+                            x2 = x1 * cp.conj(x0) / (cp.conj(x0.T) @ x0)
                             x2 = x1 * cp.conj(x0) / (rNx*rNy*rNz)
                             d_rho = lbda * x2
                             rho += d_rho
@@ -149,14 +154,51 @@ def mrdRecon(reconMode: str, sign:str, BoFit:str,
 
                     return rho
         
+        # def art_batch(kx, ky, kz, x, y, z, s, rho, lbda, n_iter, batch_size=500):
+        #     """
+        #     ART optimizado por bloques para GPU usando CuPy.
+        #     """
+        #     n_samples = len(s)
+        #     N_voxels = x.shape[0]  # asumimos x, y, z tienen misma forma
+        #     print("ART con batches de tamaño", batch_size)
+
+        #     for iteration in range(n_iter):
+        #         print(f"ART iteration {iteration + 1}/{n_iter}")
+
+        #         for start in range(0, n_samples, batch_size):
+        #             end = min(start + batch_size, n_samples)
+        #             bsize = end - start
+
+        #             # Extrae bloques de datos
+        #             kx_batch = kx[start:end].reshape(-1, 1)  # shape (B,1)
+        #             ky_batch = ky[start:end].reshape(-1, 1)
+        #             kz_batch = kz[start:end].reshape(-1, 1)
+        #             s_batch  = s[start:end].reshape(-1)      # shape (B,)
+
+        #             # Calcula la fase: broadcasting eficiente
+        #             # x, y, z: (N,), kx_batch: (B,1) → resultado: (B, N)
+        #             phase = kx_batch * x[None, :] + ky_batch * y[None, :] + kz_batch * z[None, :]
+        #             x0 = cp.exp(-1j * vecSign[4] * phase)  # shape (B, N)
+
+        #             # Predicción: producto escalar por batch
+        #             pred = x0 @ rho                        # shape (B,)
+        #             residual = s_batch - pred              # shape (B,)
+
+        #             # Actualización de rho
+        #             update = residual[:, None] * cp.conj(x0) / N_voxels  # shape (B, N)
+        #             d_rho = lbda * cp.sum(update, axis=0)                # shape (N,)
+        #             rho += d_rho
+
+        #     return rho
+        
         imgART= art(kx_gpu,ky_gpu,kz_gpu,sx_gpu,sy_gpu,sz_gpu,signal_gpu, rho_gpu,lbda, n_iter)
         img = cp.asnumpy(imgART)
-        img = np.reshape(img, (1,eNx[0],eNy[1],eNz[2]))
+        img = np.reshape(img, (1,eNx,eNy,eNz))
         img = np.abs(img).astype(np.float32)
         return img
     
     if reconMode == 'fft':
-        kSpace = np.reshape(kSpace_buffer, [rNx[0],rNy[1],rNz[2]])
+        kSpace = np.reshape(kSpace_buffer, [rNx,rNy,rNz])
         imgRecon = pythonfft(kSpace)
     elif reconMode == 'art' or reconMode == 'artpk':
         imgRecon = pythonART()
@@ -185,13 +227,13 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--sign', type=str, required=False, help="Signs and others for code generalization [xsignG,ysignG,zsignG,cpPhase,artPhase,dfovx_sign,dfovy_sign,dfovz_sign, cp_batchsize]")
     parser.add_argument('-BoFit', '--BoFit', type=str, default = False, required=False, help="Bo Fit string")
     
-    parser.set_defaults(
-        input = '/home/tyger/tyger_repo_may/Tyger_MRIlab/CP_ARTPK_ART/recon_scripts/testPETRA.bin', 
-        output = '/home/tyger/tyger_repo_may/Tyger_MRIlab/CP_ARTPK_ART/recon_scripts/reconPETRA.bin',
-        recon = 'art', 
-        sign = "[-1,-1,-1,1,1,1,1,1,1000]",
-        BoFit = """0*x+0*y+0*z"""
-        )
+    # parser.set_defaults(
+    #     input = '/home/tyger/tyger_repo_may/Tyger_MRIlab/PETRA_recon/recon_scripts/testPETRA.bin', 
+    #     output = '/home/tyger/tyger_repo_may/Tyger_MRIlab/PETRA_recon/recon_scripts/reconPETRA.bin',
+    #     recon = 'art', 
+    #     sign = "[-1,-1,-1,1,1,1,1,1,1000]",
+    #     BoFit = """0*x+0*y+0*z"""
+    #     )
     
     args = parser.parse_args()
 
