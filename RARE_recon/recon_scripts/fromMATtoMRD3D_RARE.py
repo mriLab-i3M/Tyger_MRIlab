@@ -7,7 +7,7 @@ import scipy.io as sio
 import sys
 
 def matToMRD(input, output_file):
-    print('From MAT to MRD...')
+    # print('From MAT to MRD...')
     
     # OUTPUT - write .mrd
     output = sys.stdout.buffer
@@ -39,13 +39,13 @@ def matToMRD(input, output_file):
     dfov = mat_data['dfov'][0]; dfov = dfov.astype(np.float32)  # mm; x, y, z
     acqTime = mat_data['acqTime'][0]*1e-3 # s
     
-    print('axesOrientation',  axesOrientation)
-    print('nPoints',  nPoints)
-    print('nXYZ',  nXYZ)
-    print('nPoints_sig', nPoints_sig)
-    print('fov:,', fov)
-    print('fov_adq: ',fov_adq)
-    print('dfov: ', dfov)
+    # print('axesOrientation',  axesOrientation)
+    # print('nPoints',  nPoints)
+    # print('nXYZ',  nXYZ)
+    # print('nPoints_sig', nPoints_sig)
+    # print('fov:,', fov)
+    # print('fov_adq: ',fov_adq)
+    # print('dfov: ', dfov)
     
     # Signal vector
     sampledCartesian = mat_data['sampledCartesian']

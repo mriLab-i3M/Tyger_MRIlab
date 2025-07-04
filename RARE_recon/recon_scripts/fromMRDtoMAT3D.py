@@ -18,6 +18,7 @@ def export(input, output, out_field):
     rawData = sio.loadmat(output)
     rawData[out_field] = imgRecon
     sio.savemat(output, rawData)
+    return imgRecon
             
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Save recon in .mat file")

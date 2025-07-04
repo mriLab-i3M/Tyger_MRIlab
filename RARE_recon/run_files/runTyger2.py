@@ -1,78 +1,61 @@
-import subprocess
 import time
+import subprocess
+import io
 import scipy.io as sio
-import yaml
 import numpy as np 
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
+
+import os
+import sys
+this_file_path = os.path.abspath(__file__)
+rare_recon_dir = os.path.abspath(os.path.join(os.path.dirname(this_file_path), '..'))
+sys.path.append(rare_recon_dir)
+
+from recon_scripts.fromMATtoMRD3D_RARE import matToMRD
+from recon_scripts.fromMRDtoMAT3D import export
+
 
 
 ## INPUTS
 
 rawData_path = '/home/teresa/marcos_tyger/Next1_10.06/'
-rawData = "RarePyPulseq.2025.06.10.13.03.32.887.mat"   # [2,1,0] 
-# rawData = "RarePyPulseq.2025.06.10.13.18.00.752.mat"   # [2,1,0] 
-# rawData = "RarePyPulseq.2025.06.10.13.05.56.797.mat"     # [1,2,0] 
-# rawData = "RarePyPulseq.2025.06.10.13.08.21.374.mat"     # [1,0,2] 
-# rawData = "RarePyPulseq.2025.06.10.13.10.48.496.mat"     # [0,1,2] 
-# rawData = "RarePyPulseq.2025.06.10.13.13.13.566.mat"     # [0,2,1] 
-# rawData = "RarePyPulseq.2025.06.10.13.15.36.936.mat"     # [2,0,1] 
-# rawData = "RAREprotocols.2025.06.10.13.20.29.085.mat"   # [2,1,0]
+rawData = "RarePyPulseq.2025.06.10.13.03.32.887.mat"   
+
 rawData = rawData_path + rawData
-
-# rawData = '/home/teresa/marcos_tyger/Brain_Images/brainIR.mat'
-
 out_field = "imgReconTyger"
 
-## RECON CODE
 
-# Tiempo total
-start_total = time.time()
+print('Running Tyger Reconstruction...')
+start_time = time.time()
 
-# Paso 1: fromMATtoMRD
-start1 = time.time()
-p1 = subprocess.Popen(
-    ["python3", "RARE_recon/recon_scripts/fromMATtoMRD3D_RARE.py", "-i", rawData],
-    stdout=subprocess.PIPE,
-)
+# From MAT to MRD
+mrd_buffer = io.BytesIO()
+matToMRD(input=rawData, output_file=mrd_buffer)
+mrd_buffer.seek(0) 
+tyger_input_data = mrd_buffer.getvalue()
 
-# Paso 2: Tyger
-p2 = subprocess.Popen(
+# Run Tyger
+p2 = subprocess.run(
     ["tyger", "run", "exec", "-f", "RARE_recon/yml_files/next1_june.yml"],
-    stdin=p1.stdout,
+    input=tyger_input_data,
     stdout=subprocess.PIPE
 )
 
+p2_stdout_data = p2.stdout
 
-p1.stdout.close()
-p1.wait()  # <-- Esperamos a que termine p1
-end1 = time.time()
-# Paso 3: fromMRDtoMAT
-p3 = subprocess.Popen(
-    ["python3", "RARE_recon/recon_scripts/fromMRDtoMAT3D.py", "-o", rawData, "-of", out_field],
-    stdin=p2.stdout
-)
-p2.stdout.close()
-p2.wait()  # <-- Esperamos a que termine p2
-end2 = time.time()
-p3.communicate()  # <-- Esperamos a que termine p3
-end3 = time.time()
+# From MRD to MAT
+tyger_output_buffer = io.BytesIO(p2_stdout_data)
+export(tyger_output_buffer, rawData, out_field)
 
-# Medir duraciones
-duration1 = end1 - start1           # fromMATtoMRD
-duration2 = end2 - end1             # Tyger
-duration3 = end3 - end2             # fromMRDtoMAT
-total_duration = end3 - start_total
 
-# Mostrar resultados
-print(f"Duration fromMATtoMRD:   {duration1:.2f} seconds")
-print(f"Duration Tyger recon:    {duration2:.2f} seconds")
-print(f"Duration fromMRDtoMAT:   {duration3:.2f} seconds")
-print(f"Total Time: {total_duration:.2f} seconds")
+# Time monitorization 
+end_time = time.time()
+total_duration = end_time - start_time
+print(f"Tyger recon time: {total_duration:.2f} seconds")
 
 
 ## CHECKING RESULT
-
 rawData_pos = sio.loadmat(rawData)
 print('AxesOrientation: ', rawData_pos['axesOrientation'])
 print('dFov: ', rawData_pos['dfov'])
@@ -95,7 +78,6 @@ ax2.set_title('Tyger')
 plt.tight_layout()
 plt.savefig('RARE_recon/compTyger.png', bbox_inches='tight', dpi=300)
 # # plt.show()
-
 
 ## PLOT slicer
 nSlice1 = img3D_or.shape[0] // 2
