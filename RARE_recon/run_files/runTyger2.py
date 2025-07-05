@@ -11,7 +11,6 @@ import sys
 this_file_path = os.path.abspath(__file__)
 rare_recon_dir = os.path.abspath(os.path.join(os.path.dirname(this_file_path), '..'))
 sys.path.append(rare_recon_dir)
-
 from recon_scripts.fromMATtoMRD3D_RARE import matToMRD
 from recon_scripts.fromMRDtoMAT3D import export
 
