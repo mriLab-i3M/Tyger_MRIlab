@@ -8,24 +8,9 @@ from matplotlib.widgets import Slider
 
 
 ## INPUTS
+rawData = "/home/tyger/tyger_repo_may/next1SPDSpp/RarePyPulseq.2025.07.07.12.35.48.492.mat"  
 
-rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.03.32.887.mat"   # [2,1,0] OK
-# rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.18.00.752.mat"   # [2,1,0] OK 120,120,28
-# rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.05.56.797.mat"     # [1,2,0] 120,28,120
-# rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.08.21.374.mat"     # [1,0,2] 28,120,120
-# rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.10.48.496.mat"     # [0,1,2] 28,120,120
-# rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.13.13.566.mat"     # [0,2,1] 120,28,120
-# rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.15.36.936.mat"     # [2,0,1] 120,120,28
-
-# rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RAREprotocols.2025.06.10.13.20.29.085.mat"   # [2,1,0] OK
-# rawData = "/home/tyger/Tyger_MRIlab/fromXYZ/RareDoubleImage.2025.03.06.15.54.20.520.mat"   # [2,1,0] OK
-
-# rawData = '/home/tyger/Tyger_MRIlab/tyger3D/rawDatas/physio1/T1_1,0_RarePyPulseq.2025.04.17.11.59.59.428.mat'
-
-# rawData = '/home/tyger/tyger_repo_may/Next1dFOV_23/RarePyPulseq.2025.06.23.11.38.38.880.mat'
-# rawData = "/home/tyger/tyger_repo_may/Next1_11.06/RarePyPulseq.2025.06.11.08.19.36.327.mat"
-
-out_field = "imgReconTyger"
+out_field = "tygerFit"
 
 ## RECON CODE
 
@@ -40,7 +25,9 @@ p1 = subprocess.Popen(
 )
 
 # Paso 2: Código python que ejecutaré desde Tyger
-yml_path = "RARE_recon/yml_files/python_next1_june.yml"
+# yml_path = "RARE_recon/yml_files/python_next1_june.yml"
+yml_path = "/home/tyger/tyger_repo_may/Tyger_MRIlab/RARE_recon/yml_files/python_next1_july_newBranch.yml"
+
 with open(yml_path, "r") as f:
     config = yaml.safe_load(f)
 

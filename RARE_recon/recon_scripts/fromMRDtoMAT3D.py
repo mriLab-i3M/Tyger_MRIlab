@@ -27,8 +27,9 @@ if __name__ == "__main__":
     parser.add_argument('-of', '--out_field', type=str, required=False, help="Recon img name field")
     
     # parser.set_defaults(
-    #     input = '',
-    #     output= '',
+    #     input = '/home/tyger/tyger_repo_may/next1SPDS/reconFit.bin',
+    #     output= '/home/tyger/tyger_repo_may/next1SPDSpp/RarePyPulseq.2025.07.07.12.33.23.753.mat',
+    #     out_field = 'tygerFit'
     # )
     
     args = parser.parse_args()

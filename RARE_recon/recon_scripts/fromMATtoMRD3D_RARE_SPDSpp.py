@@ -5,6 +5,9 @@ from typing import Generator
 import mrd
 import scipy.io as sio
 import sys
+from scipy.interpolate import griddata
+from scipy.spatial import cKDTree
+import matplotlib.pyplot as plt
 
 def matToMRD(input, spdsFile, output_file):
     # print('From MAT to MRD...')
@@ -92,6 +95,52 @@ def matToMRD(input, spdsFile, output_file):
     z_esp = xyz_matrix[:,2]; z_esp = np.reshape(z_esp, nPoints_sig)   # sl, ph, rd       
     z_esp = np.reshape(z_esp, (1,z_esp.shape[0],z_esp.shape[1], z_esp.shape[2]))
     
+    # SPDS map
+    # print('SPDS reading...')
+    mat_data_spds = sio.loadmat(spdsFile)
+    mapList_spds = mat_data_spds['mapList']
+    mapList_spds[:,0] = mapList_spds[:,0]*(-1)
+    mapList_spds[:,1] = mapList_spds[:,1]*(-1)
+    mapList_spds[:,2] = mapList_spds[:,2]*(-1)
+    
+    points_target = np.stack([(x_esp*1e-3).ravel()-dfov[0], (y_esp*1e-3).ravel()-dfov[1], (z_esp*1e-3).ravel()-dfov[2]], axis=-1)
+    points_source = np.stack([mapList_spds[:,0], mapList_spds[:,1], mapList_spds[:,2]], axis=-1)
+
+    # Bo_interp = griddata(
+    #     points_source,     # puntos donde conoces Bo
+    #     mapList_spds[:,3],                # valores conocidos
+    #     points_target,     # puntos donde quieres interpolar
+    #     method='linear',   # puedes usar 'linear', 'nearest', 'cubic'
+    #     fill_value=0.0     # valor si está fuera del rango
+    # )
+
+    # tree = cKDTree(points_source)
+    # _, idx = tree.query(points_target, k=1)
+    # Bo_interp = mapList_spds[idx, 3]
+    
+    # Construir el árbol y buscar los 3 vecinos más cercanos
+    tree = cKDTree(points_source)
+    dists, idxs = tree.query(points_target, k=3)  # k=3 vecinos
+
+    # Para evitar divisiones por 0
+    dists[dists == 0] = 1e-6
+
+    # Calcular pesos inversamente proporcionales a la distancia
+    weights = 1 / dists
+    weights /= weights.sum(axis=1, keepdims=True)  # normalizamos
+
+    # Obtener los valores Bo de los 3 vecinos
+    Bo_vals = mapList_spds[idxs, 3]  # shape (N_points, 3)
+
+    # Promedio ponderado
+    Bo_interp = np.sum(weights * Bo_vals, axis=1)
+    
+    
+    bo_map_pp = Bo_interp.reshape(x_esp.shape) 
+    # print(bo_map_pp.shape)
+    # plt.imshow(bo_map_pp[0,10,:,:])
+    # plt.savefig('RARE_recon/bo_pp.png', bbox_inches='tight', dpi=300)
+    
     # OUTPUT - write .mrd
     # MRD Format
     h = mrd.Header()
@@ -136,7 +185,7 @@ def matToMRD(input, spdsFile, output_file):
         acq = mrd.Acquisition()
 
         acq.data.resize((1, nPoints[0]))
-        acq.trajectory.resize((7, nPoints[0]))
+        acq.trajectory.resize((8, nPoints[0]))
         acq.center_sample = round(nPoints[0] / 2)
 
         for s in range(nPoints[2]):
@@ -164,6 +213,7 @@ def matToMRD(input, spdsFile, output_file):
                 acq.trajectory[4,:] = x_esp[:, s, line, :]
                 acq.trajectory[5,:] = y_esp[:, s, line, :]
                 acq.trajectory[6,:] = z_esp[:, s, line, :]
+                acq.trajectory[7,:] = bo_map_pp[:, s, line, :]
                 
                 yield mrd.StreamItem.Acquisition(acq)
 
@@ -178,8 +228,9 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', type=str, required=False, help="Output MRD file")
 
     # parser.set_defaults(
-    #     input = '',
-    #     output= '',
+    #         input = '/home/tyger/tyger_repo_may/next1SPDSpp/RarePyPulseq.2025.07.07.12.33.23.753.mat',
+    #         spds = '/home/tyger/tyger_repo_may/next1SPDSpp/SPDS.2025.07.07.11.20.32.441.mat',
+    #         output= '/home/tyger/tyger_repo_may/next1SPDS/inputPP.bin',
     # )
     
     args = parser.parse_args()
