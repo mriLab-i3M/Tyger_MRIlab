@@ -12,4 +12,10 @@ roleAssignments:
     - kind: User
       userPrincipalName: tguanav@upv.edu.es
       objectId: b31fc7ba-c8fb-4284-b195-8d0825ad480e
+    - kind: User
+      userPrincipalName: joalot@upv.edu.es
+      objectId: 10ce0e5f-1dc8-40c8-ae40-4770b0a60aa4
+    - kind: User
+      userPrincipalName: ramodoi@upv.edu.es
+      objectId: 946b0b4d-7b6d-4f48-a62f-ce31598ecd83
   contributor: []
