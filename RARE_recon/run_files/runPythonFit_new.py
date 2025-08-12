@@ -1,32 +1,43 @@
 import subprocess
 import time
+import io
 import scipy.io as sio
 import yaml
 import numpy as np 
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 
+import os
+import sys
+this_file_path = os.path.abspath(__file__)
+rare_recon_dir = os.path.abspath(os.path.join(os.path.dirname(this_file_path), '..'))
+sys.path.append(rare_recon_dir)
+from recon_scripts.fromMATtoMRD3D_RARE import matToMRD
+from recon_scripts.stream_recon_RARE import reconstruct_mrd_stream
+from recon_scripts.fromMRDtoMAT3D import export
+
 ## _______________________________________________________________________________________________________________
 
 ## INPUTS 
-rawData = "/home/tyger/tyger_repo_may/Next1_10.06/RarePyPulseq.2025.06.10.13.03.32.887.mat"
-yml_path = "RARE_recon/yml_files/python_next1_june.yml"  # yml File especificando el tipo de reconstrucción.
+rawData_path = '/home/tyger/tyger_repo_may/Next1_10.06/'
+rawData = "RarePyPulseq.2025.06.10.13.03.32.887.mat"     
+rawData = rawData_path + rawData
 
-out_field = "tygerFit"
+yml_path = "RARE_recon/yml_files/python_next1_june.yml" 
+
+out_field = "pythonSPDS"
 
 ## _______________________________________________________________________________________________________________
 
 ## RECON CODE
+print('Running Python Reconstruction...')
+start_time = time.time()
 
-# Tiempo total
-start_total = time.time()
-
-# Paso 1: fromMATtoMRD
-start1 = time.time()
-p1 = subprocess.Popen(
-    ["python3", "RARE_recon/recon_scripts/fromMATtoMRD3D_RARE.py", "-i", rawData],
-    stdout=subprocess.PIPE,
-)
+# From MAT to MRD
+mrd_buffer = io.BytesIO()
+matToMRD(input=rawData, output_file=mrd_buffer)
+mrd_buffer.seek(0) 
+tyger_input_data = mrd_buffer.getvalue()
 
 # Paso 2: Recon Python
 with open(yml_path, "r") as f:
@@ -35,38 +46,23 @@ with open(yml_path, "r") as f:
 args = config["args"]
 
 p2 = subprocess.Popen(
-    ["python3", "RARE_recon/recon_scripts/stream_recon_RARE.py"]+args,
-    stdin=p1.stdout,
+    ["python3", "RARE_recon/recon_scripts/stream_recon_RARE.py", *args],
+    stdin=subprocess.PIPE,
     stdout=subprocess.PIPE
 )
 
-p1.stdout.close()
-p1.wait()  
-end1 = time.time()
+p2_stdout_data, _ = p2.communicate(input=tyger_input_data)
 
-# Paso 3: fromMRDtoMAT
-p3 = subprocess.Popen(
-    ["python3", "RARE_recon/recon_scripts/fromMRDtoMAT3D.py", "-o", rawData, "-of", out_field],
-    stdin=p2.stdout
-)
-p2.stdout.close()
-p2.wait()  
-end2 = time.time()
-p3.communicate()  
-end3 = time.time()
 
-# Medir duraciones
-duration1 = end1 - start1           # fromMATtoMRD
-duration2 = end2 - end1             # Tyger
-duration3 = end3 - end2             # fromMRDtoMAT
-total_duration = end3 - start_total
+# From MRD to MAT
+tyger_output_buffer = io.BytesIO(p2_stdout_data)
+export(tyger_output_buffer, rawData, out_field)
 
-# Mostrar resultados
-print(f"Duration fromMATtoMRD:   {duration1:.2f} seconds")
-print(f"Duration Tyger recon:    {duration2:.2f} seconds")
-print(f"Duration fromMRDtoMAT:   {duration3:.2f} seconds")
-print(f"Total Time: {total_duration:.2f} seconds")
 
+# Time monitorization 
+end_time = time.time()
+total_duration = end_time - start_time
+print(f"Python recon time: {total_duration:.2f} seconds")
 
 ## CHECKING RESULT
 
@@ -90,7 +86,7 @@ ax2.axis('off')
 ax2.set_title('Tyger')
 
 plt.tight_layout()
-plt.savefig('RARE_recon/compTyger.png', bbox_inches='tight', dpi=300)
+plt.savefig('RARE_recon/reconPython.png', bbox_inches='tight', dpi=300)
 # plt.show()
 
 
