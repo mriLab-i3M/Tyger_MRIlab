@@ -18,15 +18,28 @@ import bm4d
 ## _____________________________________________________________________________________________
 
 ## INPUTS
-rawData_path = '/home/teresa/marcos_tyger/Next1_10.06/'
-rawData = "RarePyPulseq.2025.06.10.13.03.32.887.mat"     
+# rawData_path = '/home/teresa/marcos_tyger/Next1_10.06/' 
+# rawData = "RarePyPulseq.2025.06.10.13.03.32.887.mat"     
+
+rawData_path = '/home/teresa/Documentos/Next2/Brain_02.10/BW_sweep/'
+# rawData = 'RarePyPulseq.2025.10.02.13.41.47.834.mat'
+rawData = 'RarePyPulseq.2025.10.02.13.53.47.675.mat'
+
+# rawData_path = '/home/teresa/Documentos/Next2/Brain_02.10/'
+# rawData = 'IR_RarePyPulseq.2025.10.02.14.07.37.059.mat'
+
+# rawData_path = '/home/teresa/Documentos/Next2/Brain_02.10/Edu/'
+# # rawData = 'RarePyPulseq.2025.10.02.12.45.29.072.mat'
+# rawData = 'RareDoubleImage.2025.10.02.12.59.09.009.mat'
+
 rawData = rawData_path + rawData
 
-yml_file = "RARE_recon/yml_files/next1_june.yml"
+# yml_file = "RARE_recon/yml_files/next1_june.yml"
+yml_file = "RARE_recon/yml_files/next2_oct.yml"
 
 out_field = "tygerCP"
 
-runTyger = 1
+runTyger = 0
 
 ## _____________________________________________________________________________________________
 
@@ -74,7 +87,7 @@ img3D_tyger = rawData_pos[out_field][0]
 img3D_or = np.abs(rawData_pos['image3D'])
 
 # ## PLOT compSlice
-nSlice = 19
+nSlice = 10
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
 
 ax1.imshow(img3D_or[nSlice,:,:], cmap='gray')
@@ -91,8 +104,8 @@ plt.tight_layout()
 
 ## PLOT slicer
 
-nSlice1 = img3D_or.shape[0] // 2
-nSlice2 = img3D_tyger.shape[0] // 2
+nSlice1 = img3D_or.shape[0] // 2 -10
+nSlice2 = img3D_tyger.shape[0] // 2-10
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
 plt.subplots_adjust(bottom=0.25) 

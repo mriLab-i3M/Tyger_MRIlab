@@ -18,4 +18,16 @@ roleAssignments:
     - kind: User
       userPrincipalName: ramodoi@upv.edu.es
       objectId: 946b0b4d-7b6d-4f48-a62f-ce31598ecd83
+    - kind: User
+      userPrincipalName: pgarcri@upv.edu.es
+      objectId: 9cedebe3-4bb1-4ce3-abd4-ba229e7d5975
+    - kind: User
+      userPrincipalName: epallas@upv.edu.es
+      objectId: d143e3b0-669b-4e77-a38a-5386aa05272e
+    - kind: User
+      userPrincipalName: pbengar@upv.edu.es
+      objectId: 77f5a912-911f-48cb-a8e9-2ba365f58bd2
+    - kind: User
+      userPrincipalName: joalgui2@upv.edu.es
+      objectId: 30743753-2398-4449-a1e4-e0c3313e789d
   contributor: []

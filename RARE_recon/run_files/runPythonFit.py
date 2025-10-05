@@ -19,7 +19,7 @@ from recon_scripts.fromMRDtoMAT3D import export
 ## _______________________________________________________________________________________________________________
 
 ## INPUTS 
-rawData_path = '/home/tyger/tyger_repo_may/Next1_10.06/'
+rawData_path = '/home/teresa/marcos_tyger/Next1_10.06/'
 rawData = "RarePyPulseq.2025.06.10.13.03.32.887.mat"     
 rawData = rawData_path + rawData
 
