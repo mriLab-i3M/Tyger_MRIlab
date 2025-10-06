@@ -9,60 +9,62 @@ from matplotlib.widgets import Slider
 
 ## INPUTS
 
-rawData = "/home/tyger/tyger_repo_may/PETRA_Phys1/PETRA.2025.06.20.14.10.11.662.mat"  
-# rawData = "/home/tyger/tyger_repo_may/PETRA_Phys1/PETRA.2024.12.19.19.38.08.208.mat"  
-out_field = "imgReconTygertest"
+# rawData = "/home/tyger/tyger_BoMapsShow/PETRA_Phys1/PETRA.2025.06.20.14.10.11.662.mat"  
+# rawData = "/home/tyger/tyger_BoMapsShow/PETRA_Phys1/PETRA.2024.12.19.19.38.08.208.mat"  
 
-# ## RECON CODE
+rawData = "/home/tyger/Tyger_MRIlab/toTest/Petra_tyger/PETRA.2025.07.23.19.52.53.484.mat"
+out_field = "imgReconTygerOct"
+runTyger = 1
+## RECON CODE
+if runTyger == 1:
+    # Tiempo total
+    start_total = time.time()
 
-# # Tiempo total
-# start_total = time.time()
+    # Paso 1: fromMATtoMRD
+    start1 = time.time()
+    p1 = subprocess.Popen(
+        ["python3", "PETRA_recon/recon_scripts/fromMATtoMRD3D_PETRA.py", "-i", rawData],
+        stdout=subprocess.PIPE,
+    )
 
-# # Paso 1: fromMATtoMRD
-# start1 = time.time()
-# p1 = subprocess.Popen(
-#     ["python3", "PETRA_recon/recon_scripts/fromMATtoMRD3D_PETRA.py", "-i", rawData],
-#     stdout=subprocess.PIPE,
-# )
+    # Paso 2: Código python que ejecutaré desde Tyger
+    yml_path = "PETRA_recon/yml_files/stream_recon_gpu_phys1_python_PETRA.yml"
+    with open(yml_path, "r") as f:
+        config = yaml.safe_load(f)
 
-# # Paso 2: Código python que ejecutaré desde Tyger
-# yml_path = "PETRA_recon/yml_files/stream_recon_gpu_phys1_python_PETRA.yml"
-# with open(yml_path, "r") as f:
-#     config = yaml.safe_load(f)
+    args = config["args"]
 
-# args = config["args"]
+    p2 = subprocess.Popen(
+        ["python3", "PETRA_recon/recon_scripts/stream_recon_PETRA.py"]+args,
+        stdin=p1.stdout,
+        stdout=subprocess.PIPE
+    )
 
-# p2 = subprocess.Popen(
-#     ["python3", "PETRA_recon/recon_scripts/stream_recon_PETRA.py"]+args,
-#     stdin=p1.stdout,
-#     stdout=subprocess.PIPE
-# )
+    p1.stdout.close()
+    p1.wait()  # <-- Esperamos a que termine p1
+    end1 = time.time()
+    # Paso 3: fromMRDtoMAT
+    p3 = subprocess.Popen(
+        ["python3", "PETRA_recon/recon_scripts/fromMRDtoMAT3D.py", "-o", rawData, "-of", out_field],
+        stdin=p2.stdout
+    )
+    p2.stdout.close()
+    p2.wait()  # <-- Esperamos a que termine p2
+    end2 = time.time()
+    p3.communicate()  # <-- Esperamos a que termine p3
+    end3 = time.time()
 
-# p1.stdout.close()
-# p1.wait()  # <-- Esperamos a que termine p1
-# end1 = time.time()
-# # Paso 3: fromMRDtoMAT
-# p3 = subprocess.Popen(
-#     ["python3", "PETRA_recon/recon_scripts/fromMRDtoMAT3D.py", "-o", rawData, "-of", out_field],
-#     stdin=p2.stdout
-# )
-# p2.stdout.close()
-# p2.wait()  # <-- Esperamos a que termine p2
-# end2 = time.time()
-# p3.communicate()  # <-- Esperamos a que termine p3
-# end3 = time.time()
+    # Medir duraciones
+    duration1 = end1 - start1           # fromMATtoMRD
+    duration2 = end2 - end1             # Tyger
+    duration3 = end3 - end2             # fromMRDtoMAT
+    total_duration = end3 - start_total
 
-# # Medir duraciones
-# duration1 = end1 - start1           # fromMATtoMRD
-# duration2 = end2 - end1             # Tyger
-# duration3 = end3 - end2             # fromMRDtoMAT
-# total_duration = end3 - start_total
-
-# # Mostrar resultados
-# print(f"Duración fromMATtoMRD:   {duration1:.2f} segundos")
-# print(f"Duración Tyger recon:    {duration2:.2f} segundos")
-# print(f"Duración fromMRDtoMAT:   {duration3:.2f} segundos")
-# print(f"Tiempo total del proceso: {total_duration:.2f} segundos")
+    # Mostrar resultados
+    print(f"Duración fromMATtoMRD:   {duration1:.2f} segundos")
+    print(f"Duración Tyger recon:    {duration2:.2f} segundos")
+    print(f"Duración fromMRDtoMAT:   {duration3:.2f} segundos")
+    print(f"Tiempo total del proceso: {total_duration:.2f} segundos")
 
 
 ## CHECKING RESULT
@@ -77,14 +79,14 @@ img3D_or = np.fft.ifftshift(np.fft.ifftn(np.fft.ifftshift(kSpaceArray)))
 
 print(img3D_or.shape, np.max(img3D_or), np.min(img3D_or))
 ## PLOT compSlice
-nSlice = 35
+nSlice = 20
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
 
 ax1.imshow(np.abs(img3D_or[:,nSlice,:]), cmap='gray')
 ax1.axis('off')  
 ax1.set_title('Original')
 
-ax2.imshow(np.abs(img3D_tyger[:,:,nSlice]), cmap='gray')
+ax2.imshow(np.abs(img3D_tyger[nSlice,:,:]), cmap='gray')
 ax2.axis('off')
 ax2.set_title('Tyger')
 

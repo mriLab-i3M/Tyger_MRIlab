@@ -19,13 +19,13 @@ from recon_scripts.fromMRDtoMAT3D import export
 ## _______________________________________________________________________________________________________________
 
 ## INPUTS 
-rawData_path = '/home/teresa/Documentos/Next2/Brain_02.10/BW_sweep/'
-rawData = "RarePyPulseq.2025.10.02.13.41.47.834.mat"     
+rawData_path = '/home/tyger/Tyger_MRIlab/toTest/Brain_02.10/'
+rawData = "BW_sweep/RarePyPulseq.2025.10.02.13.41.47.834.mat"     
 rawData = rawData_path + rawData
 
-yml_path = "RARE_recon/yml_files/python_next2_oct.yml" 
+yml_path = "RARE_recon/yml_files/python_next2_SH.yml" 
 # yml_path = "RARE_recon/yml_files/python_neurho_brain.yml"
-out_field = "pythonSPDS"
+out_field = "SPDS_SHFit"
 
 ## _______________________________________________________________________________________________________________
 

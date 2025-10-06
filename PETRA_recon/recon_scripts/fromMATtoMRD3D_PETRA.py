@@ -19,7 +19,9 @@ def matToMRD(input, output_file):
     
     # Head info
     nPoints = mat_data['nPoints'][0]    # x,y,z (?)
+    nPoints_recon  = np.sort(nPoints)
     nPoints = [int(x) for x in nPoints]
+    nPoints_recon = [int(x) for x in nPoints_recon]
     fov = mat_data['fov'][0]*1e1; 
     fov = fov.astype(int); fov = [int(x) for x in fov] # mm; x, y, z (?)
     
@@ -44,28 +46,6 @@ def matToMRD(input, output_file):
     kz = kTrajec[:,2]
     kz = np.reshape(kz, (1,lenT,1,1))
     
-    # # Position vectors
-    # # rd_pos = np.linspace(-fov_adq[0] / 2 + fov_adq[0] / (2 * nPoints[0]) , fov_adq[0] / 2 + fov_adq[0] / (2 * nPoints[0]), nPoints[0], endpoint=False)
-    # # ph_pos = np.linspace(-fov_adq[1] / 2 + fov_adq[1] / (2 * nPoints[1]) , fov_adq[1] / 2 + fov_adq[1] / (2 * nPoints[1]), nPoints[1], endpoint=False)
-    # # sl_pos = np.linspace(-fov_adq[2] / 2 + fov_adq[2] / (2 * nPoints[2]) , fov_adq[2] / 2 + fov_adq[2] / (2 * nPoints[2]), nPoints[2], endpoint=False)
-    # x_pos = np.linspace(-fov[0] / 2 , fov[0] / 2 , nPoints[0], endpoint=False)
-    # y_pos = np.linspace(-fov[1] / 2 , fov[1] / 2 , nPoints[1], endpoint=False)
-    # z_pos = np.linspace(-fov[2] / 2 , fov[2] / 2 , nPoints[2], endpoint=False)
-    # y_posFull, z_posFull, x_posFull = np.meshgrid(y_pos, z_pos, x_pos)
-    # x_posFull = np.reshape(x_posFull, newshape=(lenT, 1))
-    # y_posFull = np.reshape(y_posFull, newshape=(lenT, 1))
-    # z_posFull = np.reshape(z_posFull, newshape=(lenT, 1))
-    # xyz_matrix = np.concatenate((x_posFull, y_posFull, z_posFull), axis=1) # rd, ph, sl
-    
-    # x_esp = xyz_matrix[:,0]  
-    # x_esp = np.reshape(x_esp, (1,lenT,1,1))
-
-    # y_esp = xyz_matrix[:,1]
-    # y_esp = np.reshape(y_esp, (1,lenT,1,1))
-
-    # z_esp = xyz_matrix[:,2]   
-    # z_esp = np.reshape(z_esp, (1,lenT,1,1))
-    
     # OUTPUT - write .mrd
     # MRD Format
     h = mrd.Header()
@@ -75,7 +55,7 @@ def matToMRD(input, output_file):
     h.acquisition_system_information = sys_info
 
     e = mrd.EncodingSpaceType()
-    e.matrix_size = mrd.MatrixSizeType(x=nPoints[0], y=nPoints[1], z=nPoints[2])
+    e.matrix_size = mrd.MatrixSizeType(x=nPoints_recon[0], y=nPoints_recon[1], z=nPoints_recon[2])
     e.field_of_view_mm = mrd.FieldOfViewMm(x=fov[0], y=fov[1], z=fov[2])
 
     r = mrd.EncodingSpaceType()
@@ -87,14 +67,6 @@ def matToMRD(input, output_file):
     enc.encoded_space = e
     enc.recon_space = r
     h.encoding.append(enc)
-    
-    # axes_param = mrd.UserParameterStringType()
-    # axes_param.name = "axesOrientation"
-    # axes_param.value = ",".join(map(str, axesOrientation))  
-    
-    # if h.user_parameters is None:
-    #     h.user_parameters = mrd.UserParametersType()
-    # h.user_parameters.user_parameter_string.append(axes_param)
 
     def generate_data() -> Generator[mrd.StreamItem, None, None]:
         acq = mrd.Acquisition()
@@ -156,8 +128,8 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', type=str, required=False, help="Output MRD file")
 
     # parser.set_defaults(
-    #     input = '/home/tyger/tyger_repo_may/PETRA_Phys1/PETRA.2025.06.20.14.10.11.662.mat',
-    #     output= '/home/tyger/tyger_repo_may/Tyger_MRIlab/PETRA_recon/recon_scripts/testPETRA.bin',
+    #     input = '/home/tyger/Tyger_MRIlab/toTest/Petra_tyger/PETRA.2025.07.23.20.23.09.100.mat',
+    #     output= '/home/tyger/Tyger_MRIlab/toTest/Petra_tyger/testPERA.bin',
     # )
     
     args = parser.parse_args()

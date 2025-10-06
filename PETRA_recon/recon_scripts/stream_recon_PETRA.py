@@ -25,11 +25,10 @@ def stream_item_sink(input: Iterable[Union[mrd.Acquisition, mrd.Image[np.float32
         else:
             raise ValueError("Unknown item type")
 
-def mrdRecon(reconMode: str, sign:str, BoFit:str,
+def mrdRecon(reconMode: str,
               head: mrd.Header, input: Iterable[mrd.Acquisition]) -> Iterable[mrd.Image[np.float32]]:
     
     ## HEAD 
-    vecSign = ast.literal_eval(args.sign)
     enc = head.encoding[0]
 
     # Matrix size
@@ -76,22 +75,11 @@ def mrdRecon(reconMode: str, sign:str, BoFit:str,
         kx_buffer.append(acq.trajectory[0,:])
         ky_buffer.append(acq.trajectory[1,:])
         kz_buffer.append(acq.trajectory[2,:])
-
-    # kSpace_buffer = np.reshape(kSpace_buffer, -1, order='C')
-    # kx_buffer = np.reshape(kx_buffer, -1, order='C')
-    # ky_buffer = np.reshape(ky_buffer, -1, order='C')
-    # kz_buffer= np.reshape(kz_buffer, -1, order='C')
     
     kSpace_buffer = np.concatenate(kSpace_buffer)
     kx_buffer = np.concatenate(kx_buffer)
     ky_buffer = np.concatenate(ky_buffer)
     kz_buffer = np.concatenate(kz_buffer)
-    
-    def pythonfft(kSpace):        
-        img = np.fft.ifftshift(np.fft.ifftn(np.fft.ifftshift(kSpace[:, :, :])))
-        img = np.reshape(img,(1,img.shape[0],img.shape[1],img.shape[2]))
-        img = np.abs(img).astype(np.float32)
-        return img
     
     def pythonART():
         # gammabar = 42.57747892*1e6
@@ -112,9 +100,6 @@ def mrdRecon(reconMode: str, sign:str, BoFit:str,
             x[ind] = -rFOVx/2 + i * rFOVx / (rNx - 1) + (rFOVx / (2 * rNx))
             y[ind] = -rFOVy/2 + j * rFOVy / (rNy - 1) + (rFOVy / (2 * rNy))
             z[ind] = -rFOVz/2 + k * rFOVz / (rNz - 1) + (rFOVz / (2 * rNz))
-                
-        # boFit = eval(f"lambda x, y, z: {BoFit}")
-        # dBo = boFit(vecSign[0]*x, vecSign[1]*y, vecSign[2]*z)
         
         rho = np.reshape(np.zeros((rNx*rNy*rNz), dtype=complex), (-1, 1))
         rho = rho[:,0]
@@ -140,7 +125,7 @@ def mrdRecon(reconMode: str, sign:str, BoFit:str,
                         # cp.random.shuffle(index)
                         for ii in range(n_samples):
                             # ii = index[jj]
-                            x0 = cp.exp(vecSign[4]*-1j *  (kx[ii] * x + ky[ii] * y + kz[ii] * z))
+                            x0 = cp.exp(-1j *  (kx[ii] * x + ky[ii] * y + kz[ii] * z))
                             x1 =  s[ii]-(x0.T @ rho)
                             x2 = x1 * cp.conj(x0) / (cp.conj(x0.T) @ x0)
                             x2 = x1 * cp.conj(x0) / (rNx*rNy*rNz)
@@ -197,16 +182,13 @@ def mrdRecon(reconMode: str, sign:str, BoFit:str,
         img = np.abs(img).astype(np.float32)
         return img
     
-    if reconMode == 'fft':
-        kSpace = np.reshape(kSpace_buffer, [rNx,rNy,rNz])
-        imgRecon = pythonfft(kSpace)
-    elif reconMode == 'art' or reconMode == 'artpk':
+    if reconMode == 'art':
         imgRecon = pythonART()
         
     yield from produce_image(imgRecon)
 
 
-def reconstruct_mrd_stream(reconMode: str, sign:str, BoFit:str,
+def reconstruct_mrd_stream(reconMode: str,
                             input: BinaryIO, output: BinaryIO):
     with mrd.BinaryMrdReader(input) as reader:
         with mrd.BinaryMrdWriter(output) as writer:
@@ -216,7 +198,7 @@ def reconstruct_mrd_stream(reconMode: str, sign:str, BoFit:str,
             writer.write_header(head)
             writer.write_data(
                 stream_item_sink(
-                    mrdRecon(reconMode, sign, BoFit,
+                    mrdRecon(reconMode,
                               head, acquisition_reader(reader.read_data()))))
 
 if __name__ == "__main__":
@@ -224,8 +206,6 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input', type=str, required=False, help="Input file, defaults to stdin")
     parser.add_argument('-o', '--output', type=str, required=False, help="Output file, defaults to stdout")
     parser.add_argument('-r', '--recon', type=str, required=False, help="Reconstruction mode (fft, art, artpk)")
-    parser.add_argument('-s', '--sign', type=str, required=False, help="Signs and others for code generalization [xsignG,ysignG,zsignG,cpPhase,artPhase,dfovx_sign,dfovy_sign,dfovz_sign, cp_batchsize]")
-    parser.add_argument('-BoFit', '--BoFit', type=str, default = False, required=False, help="Bo Fit string")
     
     # parser.set_defaults(
     #     input = '/home/tyger/tyger_repo_may/Tyger_MRIlab/PETRA_recon/recon_scripts/testPETRA.bin', 
@@ -240,5 +220,5 @@ if __name__ == "__main__":
     input = open(args.input, "rb") if args.input is not None else sys.stdin.buffer
     output = open(args.output, "wb") if args.output is not None else sys.stdout.buffer
 
-    reconstruct_mrd_stream(args.recon, args.sign, args.BoFit,
+    reconstruct_mrd_stream(args.recon,
                             input, output)
