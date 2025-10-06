@@ -25,8 +25,8 @@ def matToMRD(input, output_file):
     fov = mat_data['fov'][0]*1e1; 
     fov = fov.astype(int); fov = [int(x) for x in fov] # mm; x, y, z (?)
     
-    print('nPoints',  nPoints)
-    print('fov:,', fov)
+    # print('nPoints',  nPoints)
+    # print('fov:,', fov)
     
     # Signal vector
     sampledCartesian = mat_data['kSpaceRaw']

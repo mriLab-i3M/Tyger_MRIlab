@@ -19,6 +19,15 @@ Python codes to execute.
 
 Among the inputs for these codes, you must indicate the path to a yml file containing the reconstruction information. There are several examples in the path: `RARE_recon/yml_files/`.
 
+## Testing - PETRA
+Python codes to execute.
+
+- Tyger recon: `PETRA_recon/run_files/runTyger.py`
+
+- Local recon: `PETRA_recon/run_files/runPythonscripts_PETRA.py`
+
+Among the inputs for these codes, you must indicate the path to a yml file containing the reconstruction information. There are several examples in the path: `PETRA_recon/yml_files/`.
+
 ## Testing - Brain
 Here are some examples of use.
 
