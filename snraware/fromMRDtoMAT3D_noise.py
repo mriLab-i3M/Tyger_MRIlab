@@ -5,16 +5,16 @@ import scipy.io as sio
 
 
 def export(input, output, out_field):
-    
-    with mrd.BinaryMrdReader(input) as r:
-        header = r.read_header()
-        for item in r.read_data():
-            if not isinstance(item, mrd.StreamItem.ImageFloat):
-                raise RuntimeError("Stream must contain only floating point images")
+    images = []
+    with mrd.BinaryMrdReader(input) as reader:
+        header = reader.read_header()
+        assert header is not None, "No header found in reconstructed file"
 
-            img = item.value
-            imgRecon = img.data
-            
+        for item in reader.read_data():
+            if isinstance(item, mrd.StreamItem.ImageFloat):
+                images.append(item.value)
+    
+    imgRecon = images[0].data        
     rawData = sio.loadmat(output)
     rawData[out_field] = imgRecon
     sio.savemat(output, rawData)

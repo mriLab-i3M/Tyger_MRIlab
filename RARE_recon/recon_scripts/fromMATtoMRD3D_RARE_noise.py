@@ -38,6 +38,8 @@ def matToMRD(input, output_file):
     fov_adq = fov_adq.astype(np.float32); fov_adq = [int(x) for x in fov_adq] # mm; x, y, z
     dfov = mat_data['dfov'][0]*1e-3; dfov = dfov.astype(np.float32)  # mm; x, y, z
     acqTime = mat_data['acqTime'][0]*1e-3 # s
+    bw = mat_data['bw_MHz'][0][0]*1e6 # Hz
+    dwell = 1/bw* 1e9 # ns
     
     # print('axesOrientation',  axesOrientation)
     # print('nPoints',  nPoints)
@@ -92,6 +94,10 @@ def matToMRD(input, output_file):
     z_esp = xyz_matrix[:,2]; z_esp = np.reshape(z_esp, nPoints_sig)   # sl, ph, rd       
     z_esp = np.reshape(z_esp, (1,z_esp.shape[0],z_esp.shape[1], z_esp.shape[2]))
     
+    ## Noise acq
+    data_noise = mat_data['data_noise']
+    nNoise = mat_data['nNoise'][0][0]
+
     # OUTPUT - write .mrd
     # MRD Format
     h = mrd.Header()
@@ -138,7 +144,26 @@ def matToMRD(input, output_file):
         acq.data.resize((1, nPoints[0]))
         acq.trajectory.resize((7, nPoints[0]))
         acq.center_sample = round(nPoints[0] / 2)
+        
+        for n in range(nNoise):
+            noise = mrd.Acquisition()
+            noise.data.resize((1, nPoints[0]))
+            noise.trajectory.resize((0, 0))
+            noise.center_sample = round(nPoints[0] / 2)
+            try:
+                noise.sample_time_ns = int(dwell)
+            except AttributeError:
+                noise.head.sampleTimeNs = int(dwell)  
 
+            noise.flags = mrd.AcquisitionFlags(0)
+            noise.flags |= mrd.AcquisitionFlags.IS_NOISE_MEASUREMENT
+            noise.idx.kspace_encode_step_1 = 0
+            noise.idx.kspace_encode_step_2 = 0
+            noise.idx.slice = 0
+            noise.idx.repetition = 0
+            noise.data[:] = data_noise[n, :]
+            yield mrd.StreamItem.Acquisition(noise)
+        
         for s in range(nPoints[2]):
             for line in range(nPoints[1]):
 
@@ -176,10 +201,10 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input', type=str, required=False, help="Input file path")
     parser.add_argument('-o', '--output', type=str, required=False, help="Output MRD file")
 
-    # parser.set_defaults(
-    #     input = '/home/teresa/marcos_tyger/Brain_Images/brainIR.mat',
-    #     output= '/home/teresa/marcos_tyger/Brain_Images/brainIR_23.10.25.bin',
-    # )
+    parser.set_defaults(
+        input = '/home/teresa/Documentos/Next1/microsoft_ruido/RarePyPulseq.2025.10.24.14.18.10.422.mat',
+        output= '/home/teresa/Documentos/Next1/microsoft_ruido/phantom_16noise_dwell.bin',
+    )
     
     args = parser.parse_args()
     matToMRD(args.input, args.output)

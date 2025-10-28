@@ -21,9 +21,9 @@ import bm4d
 # rawData_path = '/home/teresa/marcos_tyger/Next1_10.06/' 
 # rawData = "RarePyPulseq.2025.06.10.13.03.32.887.mat"     
 
-rawData_path = '/home/teresa/Documentos/Next2/Brain_02.10/BW_sweep/'
+rawData_path = '/home/teresa/Documentos/Next2/corDist/'
 # rawData = 'RarePyPulseq.2025.10.02.13.41.47.834.mat'
-rawData = 'RarePyPulseq.2025.10.02.13.53.47.675.mat'
+rawData = 'RareDoubleImage.2025.10.27.18.07.45.778.mat'
 
 # rawData_path = '/home/teresa/Documentos/Next2/Brain_02.10/'
 # rawData = 'IR_RarePyPulseq.2025.10.02.14.07.37.059.mat'
@@ -35,11 +35,11 @@ rawData = 'RarePyPulseq.2025.10.02.13.53.47.675.mat'
 rawData = rawData_path + rawData
 
 # yml_file = "RARE_recon/yml_files/next1_june.yml"
-yml_file = "RARE_recon/yml_files/next2_oct.yml"
+yml_file = "RARE_recon/yml_files/next2_abstract.yml"
 
-out_field = "tygerCP"
+out_field = "tygerCP3"
 
-runTyger = 0
+runTyger = 1
 
 ## _____________________________________________________________________________________________
 
