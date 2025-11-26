@@ -12,19 +12,22 @@ def acquisition_reader(input: Iterable[mrd.StreamItem]) -> Iterable[mrd.Acquisit
         if not isinstance(item, mrd.StreamItem.Acquisition):
             # Skip non-acquisition items
             continue
-        if item.value.flags & mrd.AcquisitionFlags.IS_NOISE_MEASUREMENT:
+        if item.value.head.flags & mrd.AcquisitionFlags.IS_NOISE_MEASUREMENT:
             # Currently ignoring noise scans
             continue
         yield item.value
 
 def stream_item_sink(input: Iterable[Union[mrd.Acquisition, mrd.Image[np.float32]]]) -> Iterable[mrd.StreamItem]:
     for item in input:
-        if isinstance(item, mrd.Acquisition):
-            yield mrd.StreamItem.Acquisition(item)
-        elif isinstance(item, mrd.Image) and item.data.dtype == np.float32:
+        if isinstance(item, mrd.StreamItem.ImageFloat):
+            yield item
+        elif isinstance(item, mrd.Image):
             yield mrd.StreamItem.ImageFloat(item)
+        elif isinstance(item, mrd.Acquisition):
+            yield mrd.StreamItem.Acquisition(item)
+
         else:
-            raise ValueError("Unknown item type")
+            raise ValueError(f"Unknown item type: {type(item)}")
 
 def mrdRecon(reconMode: str, sign:str, BoFit:str,
               head: mrd.Header, input: Iterable[mrd.Acquisition]) -> Iterable[mrd.Image[np.float32]]:
@@ -56,10 +59,6 @@ def mrdRecon(reconMode: str, sign:str, BoFit:str,
     inverse_axesOrientation = np.argsort(axesOrientation) # x,y,z
     rd_dir = rd_dir[inverse_axesOrientation] # x,y,z
     dfov = np.array(dfov) # x, y, z
-    
-    # print('rd_dir', rd_dir)
-    # print('axesOrientation:', axesOrientation)
-    # print('dfov:', dfov)
     
     enc = head.encoding[0]
 
@@ -96,9 +95,17 @@ def mrdRecon(reconMode: str, sign:str, BoFit:str,
     z_buffer = None
 
     def produce_image(img: np.ndarray) -> Iterable[mrd.Image[np.float32]]:
-        mrd_image = mrd.Image[np.float32](image_type=mrd.ImageType.MAGNITUDE, data=img)
-        yield mrd_image
-    
+        img = img.astype(np.float32)
+        header = mrd.ImageHeader(
+            image_type=mrd.ImageType.MAGNITUDE
+        )
+        img_mrd = mrd.Image(
+            head=header,
+            data=img
+        )
+        yield mrd.StreamItem.ImageFloat(img_mrd)
+        
+        
     kSpace_buffer = []
     kx_buffer = []
     ky_buffer = []
@@ -110,8 +117,8 @@ def mrdRecon(reconMode: str, sign:str, BoFit:str,
 
     for acq in input:
 
-        k1 = acq.idx.kspace_encode_step_1 if acq.idx.kspace_encode_step_1 is not None else 0
-        k2 = acq.idx.kspace_encode_step_2 if acq.idx.kspace_encode_step_2 is not None else 0
+        k1 = acq.head.idx.kspace_encode_step_1 if acq.head.idx.kspace_encode_step_1 is not None else 0
+        k2 = acq.head.idx.kspace_encode_step_2 if acq.head.idx.kspace_encode_step_2 is not None else 0
 
         # # kSpace_buffer = np.concatenate((kSpace_buffer, acq.data[0]), axis = 0) # Much slower!
         kSpace_buffer.append(acq.data[0])
@@ -272,7 +279,6 @@ def mrdRecon(reconMode: str, sign:str, BoFit:str,
                     rho[i:i+cp_batchsize] = cp.dot(s, phase_batch)
             
             return rho
-
         imgCP= conjugatePhase(kx_gpu,ky_gpu,kz_gpu,sx_gpu,sy_gpu,sz_gpu,signal_gpu, rho_gpu, dBo_gpu)
         img = cp.asnumpy(imgCP)
         img = np.reshape(img, (1,nPoints_sig[0],nPoints_sig[1],nPoints_sig[2]))

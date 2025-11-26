@@ -2,23 +2,22 @@ import sys
 import argparse
 import mrd
 import scipy.io as sio
-import numpy as np
+
 
 def export(input, output, out_field):
-    images = []
-    with mrd.BinaryMrdReader(input) as reader:
-        header = reader.read_header()
-        assert header is not None, "No header found in reconstructed file"
-
-        for item in reader.read_data():
-            if isinstance(item, mrd.StreamItem.ImageFloat):
-                images.append(item.value)
     
-    imgRecon = images[0].data        
+    with mrd.BinaryMrdReader(input) as r:
+        header = r.read_header()
+        for item in r.read_data():
+            if not isinstance(item, mrd.StreamItem.ImageFloat):
+                raise RuntimeError("Stream must contain only floating point images")
+
+            img = item.value
+            imgRecon = img.data
+            
     rawData = sio.loadmat(output)
-    rawData[out_field] = imgRecon[0]
+    rawData[out_field] = imgRecon
     sio.savemat(output, rawData)
-    return imgRecon
             
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Save recon in .mat file")
@@ -27,9 +26,8 @@ if __name__ == "__main__":
     parser.add_argument('-of', '--out_field', type=str, required=False, help="Recon img name field")
     
     # parser.set_defaults(
-    #     input = '/home/teresa/marcos_tyger/Brain_Images/output.bin',
-    #     output= '/home/teresa/marcos_tyger/Brain_Images/brainIR.mat',
-    #     out_field = 'tyger_test'
+    #     input = '',
+    #     output= '',
     # )
     
     args = parser.parse_args()

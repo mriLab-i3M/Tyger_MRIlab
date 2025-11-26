@@ -13,18 +13,14 @@ this_file_path = os.path.abspath(__file__)
 rare_recon_dir = os.path.abspath(os.path.join(os.path.dirname(this_file_path), '..'))
 sys.path.append(rare_recon_dir)
 from recon_scripts.fromMATtoMRD3D_RARE import matToMRD
-from recon_scripts.stream_recon_RARE import reconstruct_mrd_stream
 from recon_scripts.fromMRDtoMAT3D import export
 
 ## _______________________________________________________________________________________________________________
 
 ## INPUTS 
-rawData_path = '/home/teresa/Documentos/Next2/Brain_02.10/'
-rawData = "BW_sweep/RarePyPulseq.2025.10.02.13.41.47.834.mat"     
-rawData = rawData_path + rawData
+rawData = "toTest/Brain_02.10/BW_sweep/RarePyPulseq.2025.10.02.13.41.47.834.mat"     
 
-yml_path = "RARE_recon/yml_files/python_next2_SH.yml" 
-# yml_path = "RARE_recon/yml_files/python_neurho_brain.yml"
+yml_path = "RARE_recon/yml_files/python_example.yml" 
 out_field = "SPDS_SHFit"
 
 ## _______________________________________________________________________________________________________________
@@ -35,7 +31,7 @@ start_time = time.time()
 
 # From MAT to MRD
 mrd_buffer = io.BytesIO()
-matToMRD(input=rawData, output_file=mrd_buffer)
+matToMRD(input=rawData, output_file=mrd_buffer, input_field = '')
 mrd_buffer.seek(0) 
 tyger_input_data = mrd_buffer.getvalue()
 

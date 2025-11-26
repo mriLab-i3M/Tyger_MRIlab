@@ -6,7 +6,7 @@ import mrd
 import scipy.io as sio
 import sys
 
-def matToMRD(input, output_file):
+def matToMRD(input, output_file, input_field = ''):
     # print('From MAT to MRD...')
     
     # OUTPUT - write .mrd
@@ -39,18 +39,13 @@ def matToMRD(input, output_file):
     dfov = mat_data['dfov'][0]*1e-3; dfov = dfov.astype(np.float32)  # mm; x, y, z
     acqTime = mat_data['acqTime'][0]*1e-3 # s
     
-    # print('axesOrientation',  axesOrientation)
-    # print('nPoints',  nPoints)
-    # print('nXYZ',  nXYZ)
-    # print('nPoints_sig', nPoints_sig)
-    # print('fov:,', fov)
-    # print('fov_adq: ',fov_adq)
-    # print('dfov: ', dfov)
-    
     # Signal vector
     sampledCartesian = mat_data['sampledCartesian']
     signal = sampledCartesian[:,3]         
-    kSpace = np.reshape(signal, nPoints_sig) # sl, ph, rd
+    if input_field:
+        kSpace = mat_data[input_field]
+    else:
+        kSpace = np.reshape(signal, nPoints_sig) # sl, ph, rd
     kSpace = np.reshape(kSpace, (1,kSpace.shape[0],kSpace.shape[1], kSpace.shape[2])) # Expand to MRD requisites
 
     # k vectors
@@ -70,9 +65,6 @@ def matToMRD(input, output_file):
     rdTimes = np.reshape(rdTimes, (1,1,1, rdTimes.shape[0]))
 
     # Position vectors
-    # rd_pos = np.linspace(-fov_adq[0] / 2 + fov_adq[0] / (2 * nPoints[0]) , fov_adq[0] / 2 + fov_adq[0] / (2 * nPoints[0]), nPoints[0], endpoint=False)
-    # ph_pos = np.linspace(-fov_adq[1] / 2 + fov_adq[1] / (2 * nPoints[1]) , fov_adq[1] / 2 + fov_adq[1] / (2 * nPoints[1]), nPoints[1], endpoint=False)
-    # sl_pos = np.linspace(-fov_adq[2] / 2 + fov_adq[2] / (2 * nPoints[2]) , fov_adq[2] / 2 + fov_adq[2] / (2 * nPoints[2]), nPoints[2], endpoint=False)
     rd_pos = np.linspace(-fov_adq[0] / 2 , fov_adq[0] / 2 , nPoints[0], endpoint=False)
     ph_pos = np.linspace(-fov_adq[1] / 2 , fov_adq[1] / 2 , nPoints[1], endpoint=False)
     sl_pos = np.linspace(-fov_adq[2] / 2 , fov_adq[2] / 2 , nPoints[2], endpoint=False)
@@ -142,20 +134,20 @@ def matToMRD(input, output_file):
         for s in range(nPoints[2]):
             for line in range(nPoints[1]):
 
-                acq.flags = mrd.AcquisitionFlags(0)
+                acq.head.flags = mrd.AcquisitionFlags(0)
                 if line == 0:
-                    acq.flags |= mrd.AcquisitionFlags.FIRST_IN_ENCODE_STEP_1
-                    acq.flags |= mrd.AcquisitionFlags.FIRST_IN_SLICE
-                    acq.flags |= mrd.AcquisitionFlags.FIRST_IN_REPETITION
+                    acq.head.flags |= mrd.AcquisitionFlags.FIRST_IN_ENCODE_STEP_1
+                    acq.head.flags |= mrd.AcquisitionFlags.FIRST_IN_SLICE
+                    acq.head.flags |= mrd.AcquisitionFlags.FIRST_IN_REPETITION
                 if line == nPoints[1] - 1:
-                    acq.flags |= mrd.AcquisitionFlags.LAST_IN_ENCODE_STEP_1
-                    acq.flags |= mrd.AcquisitionFlags.LAST_IN_SLICE
-                    acq.flags |= mrd.AcquisitionFlags.LAST_IN_REPETITION
+                    acq.head.flags |= mrd.AcquisitionFlags.LAST_IN_ENCODE_STEP_1
+                    acq.head.flags |= mrd.AcquisitionFlags.LAST_IN_SLICE
+                    acq.head.flags |= mrd.AcquisitionFlags.LAST_IN_REPETITION
 
-                acq.idx.kspace_encode_step_1 = line
-                acq.idx.kspace_encode_step_2 = s
-                acq.idx.slice = s
-                acq.idx.repetition = 0
+                acq.head.idx.kspace_encode_step_1 = line
+                acq.head.idx.kspace_encode_step_2 = s
+                acq.head.idx.slice = s
+                acq.head.idx.repetition = 0
                 acq.data[:] = kSpace[:, s, line, :]
                 acq.trajectory[0,:] = kx[:, s, line, :]
                 acq.trajectory[1,:] = ky[:, s, line, :]

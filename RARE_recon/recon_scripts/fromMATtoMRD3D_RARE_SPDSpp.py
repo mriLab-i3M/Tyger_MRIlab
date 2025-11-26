@@ -193,18 +193,18 @@ def matToMRD(input, spdsFile, output_file):
 
                 acq.flags = mrd.AcquisitionFlags(0)
                 if line == 0:
-                    acq.flags |= mrd.AcquisitionFlags.FIRST_IN_ENCODE_STEP_1
-                    acq.flags |= mrd.AcquisitionFlags.FIRST_IN_SLICE
-                    acq.flags |= mrd.AcquisitionFlags.FIRST_IN_REPETITION
+                    acq.head.flags |= mrd.AcquisitionFlags.FIRST_IN_ENCODE_STEP_1
+                    acq.head.flags |= mrd.AcquisitionFlags.FIRST_IN_SLICE
+                    acq.head.flags |= mrd.AcquisitionFlags.FIRST_IN_REPETITION
                 if line == nPoints[1] - 1:
-                    acq.flags |= mrd.AcquisitionFlags.LAST_IN_ENCODE_STEP_1
-                    acq.flags |= mrd.AcquisitionFlags.LAST_IN_SLICE
-                    acq.flags |= mrd.AcquisitionFlags.LAST_IN_REPETITION
+                    acq.head.flags |= mrd.AcquisitionFlags.LAST_IN_ENCODE_STEP_1
+                    acq.head.flags |= mrd.AcquisitionFlags.LAST_IN_SLICE
+                    acq.head.flags |= mrd.AcquisitionFlags.LAST_IN_REPETITION
 
-                acq.idx.kspace_encode_step_1 = line
-                acq.idx.kspace_encode_step_2 = s
-                acq.idx.slice = s
-                acq.idx.repetition = 0
+                acq.head.idx.kspace_encode_step_1 = line
+                acq.head.idx.kspace_encode_step_2 = s
+                acq.head.idx.slice = s
+                acq.head.idx.repetition = 0
                 acq.data[:] = kSpace[:, s, line, :]
                 acq.trajectory[0,:] = kx[:, s, line, :]
                 acq.trajectory[1,:] = ky[:, s, line, :]
