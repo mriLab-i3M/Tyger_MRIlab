@@ -12,18 +12,17 @@ this_file_path = os.path.abspath(__file__)
 rare_recon_dir = os.path.abspath(os.path.join(os.path.dirname(this_file_path), '..'))
 sys.path.append(rare_recon_dir)
 from recon_scripts.fromMATtoMRD3D_RARE import matToMRD
-# from recon_scripts.fromMATtoMRD3D_RARE_denoising import matToMRD
 from recon_scripts.fromMRDtoMAT3D import export
-# from recon_scripts.fromMRDtoMAT3D_noise import export
 import bm4d 
 
 ## _____________________________________________________________________________________________
 
 # # INPUTS
-rawData = '/home/teresa/Documentos/Next2/paciente_MS/RareDoubleImage_FLAIR.2025.11.25.13.10.44.913.mat'
+rawData = '/media/teresa/E090-BAA0/SNRAware/brain_neurho/mat/brainIR.mat'
 
-yml_file = "RARE_recon/yml_files/next2_pacienteMS.yml"
-out_field = "CP_denoising"
+yml_file = "RARE_recon/yml_files/tyger_example.yml"
+out_field = "img_CP"
+input_field = 'kSpace3D_den_odd'    # If empty (''), it takes kSpace3D (as usual), but if you want to start from the denoising image, you can specify that field (e.g., kSpace3D_den).
 
 runTyger = 1
 
@@ -36,7 +35,7 @@ if runTyger == 1:
 
     # From MAT to MRD
     mrd_buffer = io.BytesIO()
-    matToMRD(input=rawData, output_file=mrd_buffer)
+    matToMRD(input=rawData, output_file=mrd_buffer, input_field=input_field)
     mrd_buffer.seek(0) 
     tyger_input_data = mrd_buffer.getvalue()
 

@@ -23,11 +23,11 @@ rawData = "PETRA.2025.07.23.19.57.18.607.mat"
 
 rawData = rawData_path + rawData
 
-yml_file = "PETRA_recon/yml_files/petra_art.yml"
+yml_file = "PETRA_recon/yml_files/tyger_petra_example.yml"
 
 out_field = "tygerART"
 
-runTyger = 0
+runTyger = 1
 
 ## _____________________________________________________________________________________________
 

@@ -22,6 +22,7 @@ rawData = "toTest/Brain_02.10/BW_sweep/RarePyPulseq.2025.10.02.13.41.47.834.mat"
 
 yml_path = "RARE_recon/yml_files/python_example.yml" 
 out_field = "SPDS_SHFit"
+input_field = ''
 
 ## _______________________________________________________________________________________________________________
 
@@ -31,7 +32,7 @@ start_time = time.time()
 
 # From MAT to MRD
 mrd_buffer = io.BytesIO()
-matToMRD(input=rawData, output_file=mrd_buffer, input_field = '')
+matToMRD(input=rawData, output_file=mrd_buffer, input_field = input_field)
 mrd_buffer.seek(0) 
 tyger_input_data = mrd_buffer.getvalue()
 

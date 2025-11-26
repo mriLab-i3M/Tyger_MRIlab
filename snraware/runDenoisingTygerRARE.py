@@ -16,7 +16,7 @@ from pathlib import Path
 
 ############################### INPUTS #####################################
 
-pathMAT = '/home/teresa/Descargas/RarePyPulseq.2025.07.28.08.55.05.171.mat'
+pathMAT = '/media/teresa/E090-BAA0/SNRAware/brain_neurho/mat/brainIR.mat'
 
 out_field = 'image3D_den'
 out_field_k = 'kSpace3D_den'
