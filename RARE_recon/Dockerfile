@@ -14,7 +14,24 @@ RUN apt-get update && apt-get install -y \
 
 # Install CuPy with the appropriate CUDA version
 RUN pip3 install cupy-cuda11x
-RUN pip install numpy==1.26.4 scipy==1.10.1 matplotlib==3.7.1 mrd-python==2.0.0 
+RUN pip install numpy==1.26.4 scipy==1.10.1 matplotlib==3.7.1 
+
+# 1. Instalar git (ya lo tenías)
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. (Opcional pero MUY recomendable) Actualizar pip/setuptools/wheel
+RUN python3 -m pip install --upgrade pip setuptools wheel
+
+# 3. Clonar el repo y instalar el subdirectorio python del commit concreto
+RUN git clone https://github.com/ismrmrd/mrd.git /tmp/mrd \
+    && cd /tmp/mrd \
+    && git checkout 0f7684d55cc80d9e69cbe4df21e6a4f3b41515e3 \
+    && python3 -m pip install --no-cache-dir ./python \
+    && rm -rf /tmp/mrd
+
+# 4. Comprobación de que *de verdad* existe el módulo mrd
+RUN python3 -c "import mrd, sys; print('mrd importado OK desde', mrd.__file__, 'con', sys.executable)"
 
 # Copy the application code into the container
 WORKDIR /app
