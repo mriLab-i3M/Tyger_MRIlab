@@ -6,7 +6,7 @@ import mrd
 import scipy.io as sio
 import sys
 
-def matToMRD(input, output_file):
+def matToMRD_old(input, output_file):
     # print('From MAT to MRD...')
    
     # OUTPUT - write .mrd
@@ -54,9 +54,7 @@ def matToMRD(input, output_file):
     signal = sampledCartesian[:,3]        
     kSpace = np.reshape(signal, nPoints_sig) # sl, ph, rd
     kSpace = np.reshape(kSpace, (1,kSpace.shape[0],kSpace.shape[1], kSpace.shape[2])) # Expand to MRD requisites
-    # kSpace[0,0:10,:,:] = kSpace[0,0:10,:,:]*0 ## Zero padding simulation
-    # kSpace[0,:,:,350:] = kSpace[0,:,:,350:]*0 ## Removing artifacts
-    
+
     # k vectors
     kTrajec = np.real(sampledCartesian[:,0:3]).astype(np.float32)    # rd, ph, sl
     kTrajec = kTrajec[:,inverse_axesOrientation]    # x, y, z
@@ -98,10 +96,15 @@ def matToMRD(input, output_file):
    
     ## Noise acq
     data_noise = mat_data['data_noise']
-    nNoise = mat_data['nNoise'][0][0].item()
+    addRdPoints = mat_data['addRdPoints'][0][0]
+    data_noise = np.reshape(data_noise, (-1, nPoints[0]+addRdPoints*2))
+    data_noise = data_noise[:, addRdPoints : -addRdPoints]
+    nNoise = data_noise.shape[0]
+    # nNoise= 16
     print('Num of noise acq:')
     print(nNoise)
-    
+    # nNoise = mat_data['nNoise'][0][0].item()
+
     # OUTPUT - write .mrd
     # MRD Format
     h = mrd.Header()
@@ -165,7 +168,6 @@ def matToMRD(input, output_file):
     h.user_parameters.user_parameter_double.append(readout_gradient)
     h.user_parameters.user_parameter_string.append(axes_param)
     h.user_parameters.user_parameter_string.append(d_fov)
-
     def generate_data() -> Generator[mrd.StreamItem, None, None]:
         acq = mrd.Acquisition()
 
@@ -258,8 +260,12 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', type=str, required=False, help="Output MRD file")
 
     parser.set_defaults(
-        input = '/data/raw_data/i3m/RarePyPulseq.2025.10.24.14.18.10.422.mat',
-        output= '/data/raw_data/i3m/RarePyPulseq.2025.10.24.14.18.10.422.mrd',
+        input = '/home/teresa/Documentos/Physio_I/Protocolo25/mat/RarePyPulseq.2025.07.11.13.14.49.175.mat',
+        output= '/home/teresa/Documentos/Physio_I/Protocolo25/mat/RarePyPulseq.2025.07.11.13.14.49.175.mrd',
+        
+        # input = '/home/teresa/Documentos/Next1/SNRAware/RarePyPulseq.2025.10.28.22.11.53.792.mat',
+        # output= '/home/teresa/Documentos/Next1/SNRAware/RarePyPulseq.2025.10.28.22.11.53.792.mrd',
+        
     )
    
     args = parser.parse_args()

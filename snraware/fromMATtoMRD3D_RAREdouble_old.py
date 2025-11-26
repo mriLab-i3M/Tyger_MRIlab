@@ -6,9 +6,8 @@ import mrd
 import scipy.io as sio
 import sys
 
-def matToMRD(input, output_file):
+def matToMRD_old(input, output_file, input_field_raw):
     # print('From MAT to MRD...')
-   
     # OUTPUT - write .mrd
     output = sys.stdout.buffer
     if output_file is not None:
@@ -31,7 +30,7 @@ def matToMRD(input, output_file):
     except: # RAREprotocols
         rdGradAmplitude = mat_data['rdGradAmplitude']
        
-    fov = mat_data['fov'][0]*1e1;
+    fov = mat_data['fov'][0]*1e1
     fov_adq = fov[axesOrientation] # rd, ph, sl
     fov = fov.astype(int); fov = [int(x) for x in fov] # mm; x, y, z
     fov_adq = fov_adq
@@ -50,13 +49,11 @@ def matToMRD(input, output_file):
     # print('dfov: ', dfov)
    
     # Signal vector
-    sampledCartesian = mat_data['sampledCartesian']
+    sampledCartesian = mat_data[input_field_raw]
     signal = sampledCartesian[:,3]        
     kSpace = np.reshape(signal, nPoints_sig) # sl, ph, rd
     kSpace = np.reshape(kSpace, (1,kSpace.shape[0],kSpace.shape[1], kSpace.shape[2])) # Expand to MRD requisites
-    # kSpace[0,0:10,:,:] = kSpace[0,0:10,:,:]*0 ## Zero padding simulation
-    # kSpace[0,:,:,350:] = kSpace[0,:,:,350:]*0 ## Removing artifacts
-    
+
     # k vectors
     kTrajec = np.real(sampledCartesian[:,0:3]).astype(np.float32)    # rd, ph, sl
     kTrajec = kTrajec[:,inverse_axesOrientation]    # x, y, z
@@ -97,11 +94,15 @@ def matToMRD(input, output_file):
     z_esp = np.reshape(z_esp, (1,z_esp.shape[0],z_esp.shape[1], z_esp.shape[2]))
    
     ## Noise acq
+    
     data_noise = mat_data['data_noise']
-    nNoise = mat_data['nNoise'][0][0].item()
+    addRdPoints = mat_data['addRdPoints'][0][0]
+    data_noise = np.reshape(data_noise, (-1, nPoints[0]+addRdPoints*2))
+    data_noise = data_noise[:, addRdPoints : -addRdPoints]
+    nNoise = data_noise.shape[0]
     print('Num of noise acq:')
     print(nNoise)
-    
+
     # OUTPUT - write .mrd
     # MRD Format
     h = mrd.Header()

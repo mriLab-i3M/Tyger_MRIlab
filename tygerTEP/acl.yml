@@ -30,4 +30,10 @@ roleAssignments:
     - kind: User
       userPrincipalName: joalgui2@upv.edu.es
       objectId: 30743753-2398-4449-a1e4-e0c3313e789d
+    - kind: User
+      userPrincipalName: ecasgar@upv.edu.es
+      objectId: abd1a170-4509-4d5f-bbe1-f16d57269344
+    - kind: User
+      userPrincipalName: mfergar2@upv.edu.es
+      objectId: 623e332e-4ffb-400c-be9e-48535373588f
   contributor: []

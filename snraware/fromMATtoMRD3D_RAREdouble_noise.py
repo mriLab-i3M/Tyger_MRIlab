@@ -6,7 +6,7 @@ import mrd
 import scipy.io as sio
 import sys
 
-def matToMRD(input, output_file):
+def matToMRD(input, output_file, input_field_raw):
     # print('From MAT to MRD...')
    
     # OUTPUT - write .mrd
@@ -50,12 +50,11 @@ def matToMRD(input, output_file):
     # print('dfov: ', dfov)
    
     # Signal vector
-    sampledCartesian = mat_data['sampledCartesian']
+    # sampledCartesian = mat_data['sampledCartesian']
+    sampledCartesian = mat_data[input_field_raw]
     signal = sampledCartesian[:,3]        
     kSpace = np.reshape(signal, nPoints_sig) # sl, ph, rd
     kSpace = np.reshape(kSpace, (1,kSpace.shape[0],kSpace.shape[1], kSpace.shape[2])) # Expand to MRD requisites
-    # kSpace[0,0:10,:,:] = kSpace[0,0:10,:,:]*0 ## Zero padding simulation
-    # kSpace[0,:,:,350:] = kSpace[0,:,:,350:]*0 ## Removing artifacts
     
     # k vectors
     kTrajec = np.real(sampledCartesian[:,0:3]).astype(np.float32)    # rd, ph, sl
@@ -257,10 +256,10 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input', type=str, required=False, help="Input file path")
     parser.add_argument('-o', '--output', type=str, required=False, help="Output MRD file")
 
-    parser.set_defaults(
-        input = '/data/raw_data/i3m/RarePyPulseq.2025.10.24.14.18.10.422.mat',
-        output= '/data/raw_data/i3m/RarePyPulseq.2025.10.24.14.18.10.422.mrd',
-    )
+    # parser.set_defaults(
+    #     input = '/data/raw_data/i3m/RarePyPulseq.2025.10.24.14.18.10.422.mat',
+    #     output= '/data/raw_data/i3m/RarePyPulseq.2025.10.24.14.18.10.422.mrd',
+    # )
    
     args = parser.parse_args()
     matToMRD(args.input, args.output)
