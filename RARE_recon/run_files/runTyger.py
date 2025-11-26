@@ -11,43 +11,21 @@ import sys
 this_file_path = os.path.abspath(__file__)
 rare_recon_dir = os.path.abspath(os.path.join(os.path.dirname(this_file_path), '..'))
 sys.path.append(rare_recon_dir)
-# from recon_scripts.fromMATtoMRD3D_RARE import matToMRD
-from recon_scripts.fromMATtoMRD3D_RARE_denoising import matToMRD
+from recon_scripts.fromMATtoMRD3D_RARE import matToMRD
+# from recon_scripts.fromMATtoMRD3D_RARE_denoising import matToMRD
 from recon_scripts.fromMRDtoMAT3D import export
+# from recon_scripts.fromMRDtoMAT3D_noise import export
 import bm4d 
 
 ## _____________________________________________________________________________________________
 
 # # INPUTS
-# rawData_path = '/home/teresa/marcos_tyger/Next1_10.06/' 
-# rawData = "RarePyPulseq.2025.06.10.13.03.32.887.mat"     
+rawData = '/home/teresa/Documentos/Next2/paciente_MS/RareDoubleImage_FLAIR.2025.11.25.13.10.44.913.mat'
 
-# rawData_path = '/home/teresa/Documentos/Next2/corDist/'
-# rawData = 'RarePyPulseq.2025.10.02.13.41.47.834.mat'
-# rawData = 'RareDoubleImage.2025.10.27.18.07.45.778.mat'
-
-# rawData_path = '/home/teresa/Documentos/Next2/Brain_02.10/'
-# rawData = 'IR_RarePyPulseq.2025.10.02.14.07.37.059.mat'
-
-# rawData_path = '/home/teresa/Documentos/Next2/Brain_02.10/Edu/'
-# # rawData = 'RarePyPulseq.2025.10.02.12.45.29.072.mat'
-# rawData = 'RareDoubleImage.2025.10.02.12.59.09.009.mat'
-
-
-rawData_path = '/home/teresa/Documentos/Next2/paciente_MS/'
-# rawData = 'RareDoubleImage_T1.2025.11.25.12.28.46.053.mat'
-# rawData = 'RareDoubleImage_T2.2025.11.25.12.54.38.925.mat'
-rawData = 'RareDoubleImage_FLAIR.2025.11.25.13.10.44.913.mat'
-rawData = rawData_path + rawData
-
-
-# yml_file = "RARE_recon/yml_files/next1_june.yml"
 yml_file = "RARE_recon/yml_files/next2_pacienteMS.yml"
-# yml_file = "RARE_recon/yml_files/neurho_brain.yml"
-
 out_field = "CP_denoising"
 
-runTyger = 0
+runTyger = 1
 
 ## _____________________________________________________________________________________________
 
