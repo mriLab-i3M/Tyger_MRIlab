@@ -13,10 +13,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 from pathlib import Path
+import config as hw
 
 ############################### INPUTS #####################################
 
-pathMAT = '/media/teresa/E090-BAA0/SNRAware/brain_neurho/mat/brainIR.mat'
+# pathMAT = '/media/teresa/E090-BAA0/SNRAware/brain_neurho/mat/brainIR.mat'
+pathMAT = "C:\\Users\\teres\\OneDrive\\Documentos\\Papers\\2026-SNRAware\\BoComp\\Physio1\\RarePyPulseq.2026.01.19.16.41.05.523.mat"
 
 out_field = 'image3D_den'
 out_field_k = 'kSpace3D_den'
@@ -43,7 +45,7 @@ if runTyger == 1:
 
     start_time = time.time()
     subprocess.run(
-        ["bash", pathSHpipeline, pathMRD_or, pathMRD_ia],
+        [hw.bash_path, pathSHpipeline, pathMRD_or, pathMRD_ia],
         check=True
     )
     
