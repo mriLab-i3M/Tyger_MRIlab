@@ -19,6 +19,7 @@ import config as hw
 
 # pathMAT = '/media/teresa/E090-BAA0/SNRAware/brain_neurho/mat/brainIR.mat'
 pathMAT = "C:\\Users\\teres\\OneDrive\\Documentos\\Papers\\2026-SNRAware\\BoComp\\Physio1\\RarePyPulseq.2026.01.19.16.41.05.523.mat"
+# pathMAT = '/mnt/c/Users/teres/OneDrive/Documentos/PhysioMRI_Tech/210126-TestMaRGE/RarePyPulseq_tgn.2026.01.20.14.05.07.654.mat'
 
 out_field = 'image3D_den'
 out_field_k = 'kSpace3D_den'

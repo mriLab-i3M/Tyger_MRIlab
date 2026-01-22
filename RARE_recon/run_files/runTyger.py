@@ -18,11 +18,13 @@ import bm4d
 ## _____________________________________________________________________________________________
 
 # # INPUTS
-rawData = '/media/teresa/E090-BAA0/SNRAware/brain_neurho/mat/brainIR.mat'
+# rawData = '/media/teresa/E090-BAA0/SNRAware/brain_neurho/mat/brainIR.mat'
+rawData = "C:\\Users\\teres\\OneDrive\\Documentos\\Papers\\2026-SNRAware\\BoComp\\Physio1\\RarePyPulseq.2026.01.19.16.41.05.523.mat"
 
 yml_file = "RARE_recon/yml_files/tyger_example.yml"
 out_field = "img_CP"
-input_field = 'kSpace3D_den_odd'    # If empty (''), it takes kSpace3D (as usual), but if you want to start from the denoising image, you can specify that field (e.g., kSpace3D_den).
+# input_field = 'kSpace3D_den_odd'    # If empty (''), it takes kSpace3D (as usual), but if you want to start from the denoising image, you can specify that field (e.g., kSpace3D_den).
+input_field = ''
 
 runTyger = 1
 
