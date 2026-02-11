@@ -1,0 +1,26 @@
+job:
+  codespec:
+    image: ghcr.io/teresaguallartnaval/dist_corr_tyger:v1
+    buffers:
+      inputs:
+        - input
+      outputs:
+        - output
+    args:
+      - python3
+      - stream_recon_RARE.py
+      - -i
+      - $(INPUT_PIPE)
+      - -o
+      - $(OUTPUT_PIPE) 
+      - -r
+      - 'fft'
+      - -s
+      - "[-1,-1,-1,1,1,1,1,1,1000]"
+      - -BoFit
+      - >
+        0*x+0*y+0*z
+    resources:
+      requests:
+        cpu: 1
+      gpu: 1
