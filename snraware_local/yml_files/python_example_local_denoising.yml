@@ -1,0 +1,10 @@
+args:
+  - --recon
+  - fft
+  - --denoise
+  - --snraware_repo
+  - /home/miguel/dev/SNRAware
+  - --snraware_model
+  - small
+  - --batch_size
+  - "1"
