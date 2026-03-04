@@ -36,4 +36,29 @@ roleAssignments:
     - kind: User
       userPrincipalName: mfergar2@upv.edu.es
       objectId: 623e332e-4ffb-400c-be9e-48535373588f
+    - kind: User
+      userPrincipalName: rasiimw@upv.edu.es
+      objectId: 63861fdf-feb7-4bda-984e-a2589a9f978d
+    - kind: User
+      userPrincipalName: joborpla@upv.edu.es
+      objectId: 5aa84572-76c3-499f-ae0a-e4fc49107d04
+    - kind: User
+      userPrincipalName: algonceb@upv.edu.es
+      objectId: 221097f7-4a3e-4d9e-bb69-e94d919b3a31
+    - kind: User
+      userPrincipalName: lvegcid@upv.edu.es
+      objectId: aa4e2c32-63db-4d6e-851a-a1dd1cb9a52c
+    - kind: User
+      userPrincipalName: ruboses@upv.edu.es
+      objectId: bd0fec96-ea16-4d04-a459-ecdb85f361f6
+    - kind: User
+      userPrincipalName: jconrod@upv.edu.es
+      objectId: 43376a37-1a76-418a-958a-e8d54000e2fa
+    - kind: User
+      userPrincipalName: lgsandec@upv.edu.es
+      objectId: b50ce0a4-4fe1-456b-9bd4-8eea86f7719c
+    - kind: User
+      userPrincipalName: manassej@upv.edu.es
+      objectId: 2f4280e5-49d8-4ee3-811a-3016437ff331
+
   contributor: []
