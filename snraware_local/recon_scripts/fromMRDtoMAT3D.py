@@ -1,39 +1,44 @@
-import sys
-import argparse
-import mrd
+import numpy as np
 import scipy.io as sio
+import mrd
 
 
-def export(input, output, out_field):
-    
-    with mrd.BinaryMrdReader(input) as r:
+def export(mrd_input, mat_in_path: str, mat_out_path: str, out_field: str = "image3D_denoised"):
+    """
+    Lee un MRD (stream) producido por stream_recon_RARE.py y escribe un MAT nuevo
+    con el campo out_field. NO modifica el MAT original.
+    """
+
+    # Cargamos MAT original para copiar todo y añadir el campo de salida
+    mat = sio.loadmat(mat_in_path)
+
+    # Abrimos MRD reader (admite file-like, bytes buffer, etc.)
+    with mrd.BinaryMrdReader(mrd_input) as r:
         header = r.read_header()
-        for item in r.read_data():
-            if not isinstance(item, mrd.StreamItem.ImageFloat):
-                raise RuntimeError("Stream must contain only floating point images")
 
-            img = item.value
-            imgRecon = img.data
-            
-    rawData = sio.loadmat(output)
-    rawData[out_field] = imgRecon
-    sio.savemat(output, rawData)
-    return imgRecon
-            
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Save recon in .mat file")
-    parser.add_argument('-i', '--input', type=str, required=False, help="Input file (default stdin)")
-    parser.add_argument('-o', '--output', type=str, required=False, help="Output filename .mat")
-    parser.add_argument('-of', '--out_field', type=str, required=False, help="Recon img name field")
-    
-    # parser.set_defaults(
-    #     input = '/home/teresa/marcos_tyger/Brain_Images/output.bin',
-    #     output= '/home/teresa/marcos_tyger/Brain_Images/brainIR.mat',
-    #     out_field = 'tyger_test'
-    # )
-    
-    args = parser.parse_args()
+        img_data = None
 
-    input = open(args.input, "rb") if args.input is not None else sys.stdin.buffer
+        # IMPORTANTE: consumir el iterador completo para no disparar ProtocolError
+        it = r.read_data()
+        for item in it:
+            # Nos interesan items de tipo imagen
+            if isinstance(item, mrd.StreamItem.ImageFloat):
+                img = item.value  # mrd.Image
+                img_data = np.asarray(img.data)  # normalmente 4D (1, sl, ph, rd)
+                # NO hacemos break: seguimos consumiendo hasta el final
+                # para cerrar el reader sin error
 
-    export(input, args.output, args.out_field)
+        if img_data is None:
+            raise RuntimeError("No se encontró ninguna ImageFloat en el MRD de salida.")
+
+    # Convertimos de 4D a 3D si venía con batch=1
+    # stream_recon_RARE escribe (1, sl, ph, rd)
+    if img_data.ndim == 4 and img_data.shape[0] == 1:
+        img_data = img_data[0]  # (sl, ph, rd)
+
+    # Guardamos como float32 por consistencia (es magnitud)
+    mat[out_field] = img_data.astype(np.float32, copy=False)
+
+    # Guardamos MAT de salida (nuevo archivo)
+    sio.savemat(mat_out_path, mat)
+    print(f"Export OK: '{out_field}' guardado en {mat_out_path}")

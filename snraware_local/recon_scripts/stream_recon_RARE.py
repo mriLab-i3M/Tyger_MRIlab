@@ -1,334 +1,193 @@
-import sys
 import argparse
+import os
+import sys
+import tempfile
+import subprocess
 import numpy as np
-from typing import BinaryIO, Iterable, Union
 import mrd
-import cupy as cp 
-import ast
-from scipy.special import lpmv
-
-def acquisition_reader(input: Iterable[mrd.StreamItem]) -> Iterable[mrd.Acquisition]:
-    for item in input:
-        if not isinstance(item, mrd.StreamItem.Acquisition):
-            # Skip non-acquisition items
-            continue
-        if item.value.head.flags & mrd.AcquisitionFlags.IS_NOISE_MEASUREMENT:
-            # Currently ignoring noise scans
-            continue
-        yield item.value
-
-def stream_item_sink(input: Iterable[Union[mrd.Acquisition, mrd.Image[np.float32]]]) -> Iterable[mrd.StreamItem]:
-    for item in input:
-        if isinstance(item, mrd.StreamItem.ImageFloat):
-            yield item
-        elif isinstance(item, mrd.Image):
-            yield mrd.StreamItem.ImageFloat(item)
-        elif isinstance(item, mrd.Acquisition):
-            yield mrd.StreamItem.Acquisition(item)
-
-        else:
-            raise ValueError(f"Unknown item type: {type(item)}")
-
-def mrdRecon(reconMode: str, sign:str, BoFit:str,
-              head: mrd.Header, input: Iterable[mrd.Acquisition]) -> Iterable[mrd.Image[np.float32]]:
-    
-    ## HEAD 
-    
-    # Custom parameters
-    vecSign = ast.literal_eval(args.sign)
-    try:
-        cp_batchsize = vecSign[8]
-    except:
-        cp_batchsize = 1000
-        
-    if head.user_parameters and head.user_parameters.user_parameter_double:
-        for param in head.user_parameters.user_parameter_double:
-            if param.name == "readout_gradient_intensity":
-                rdGradAmplitude = param.value
-                break
-    
-    if head.user_parameters and head.user_parameters.user_parameter_string:
-        for param in head.user_parameters.user_parameter_string:
-            if param.name == "axesOrientation":
-                axesOrientation = list(map(int, param.value.split(',')))
-            if param.name == "dfov":
-                dfov = list(map(float, param.value.split(',')))
-                
-    axesOrientation = np.array(axesOrientation) # rd, ph, sl
-    rd_dir = np.array([1,0,0]) # rd, ph, sl
-    inverse_axesOrientation = np.argsort(axesOrientation) # x,y,z
-    rd_dir = rd_dir[inverse_axesOrientation] # x,y,z
-    dfov = np.array(dfov) # x, y, z
-    
-    enc = head.encoding[0]
-
-    # Matrix size
-    if enc.encoded_space and enc.recon_space and enc.encoded_space.matrix_size and enc.recon_space.matrix_size:
-        eNx = enc.encoded_space.matrix_size.x
-        eNy = enc.encoded_space.matrix_size.y
-        eNz = enc.encoded_space.matrix_size.z
-        rNx = enc.recon_space.matrix_size.x
-        rNy = enc.recon_space.matrix_size.y
-        rNz = enc.recon_space.matrix_size.z
-        nPoints_sig = np.array([eNx,eNy,eNz]) # x,y,z
-        nPoints_sig = nPoints_sig[axesOrientation] # rd, ph, sl
-        nPoints_sig = nPoints_sig[[2,1,0]] # sl, ph, rd
-    else:
-        raise Exception('Required encoding information not found in header')
-
-    # Field of view
-    if enc.recon_space and enc.recon_space.field_of_view_mm:
-        rFOVx = enc.recon_space.field_of_view_mm.x*1e-3
-        rFOVy = enc.recon_space.field_of_view_mm.y*1e-3
-        rFOVz = enc.recon_space.field_of_view_mm.z*1e-3 if enc.recon_space.field_of_view_mm.z else 1
-    else:
-        raise Exception('Required field of view information not found in header')
-
-    # Signal, ks, positions
-    kSpace_buffer = None
-    kx_buffer = None
-    ky_buffer = None
-    kz_buffer = None
-    times_buffer = None
-    x_buffer = None
-    y_buffer = None
-    z_buffer = None
-
-    def produce_image(img: np.ndarray) -> Iterable[mrd.Image[np.float32]]:
-        img = img.astype(np.float32)
-        header = mrd.ImageHeader(
-            image_type=mrd.ImageType.MAGNITUDE
-        )
-        img_mrd = mrd.Image(
-            head=header,
-            data=img
-        )
-        yield mrd.StreamItem.ImageFloat(img_mrd)
-        
-        
-    kSpace_buffer = []
-    kx_buffer = []
-    ky_buffer = []
-    kz_buffer = []
-    times_buffer = []
-    x_buffer = []
-    y_buffer = []
-    z_buffer = []
-
-    for acq in input:
-
-        k1 = acq.head.idx.kspace_encode_step_1 if acq.head.idx.kspace_encode_step_1 is not None else 0
-        k2 = acq.head.idx.kspace_encode_step_2 if acq.head.idx.kspace_encode_step_2 is not None else 0
-
-        # # kSpace_buffer = np.concatenate((kSpace_buffer, acq.data[0]), axis = 0) # Much slower!
-        kSpace_buffer.append(acq.data[0])
-        kx_buffer.append(acq.trajectory[0,:])
-        ky_buffer.append(acq.trajectory[1,:])
-        kz_buffer.append(acq.trajectory[2,:])
-        times_buffer.append(acq.trajectory[3,:])
-        x_buffer.append(acq.trajectory[4,:])
-        y_buffer.append(acq.trajectory[5,:])
-        z_buffer.append(acq.trajectory[6,:])
-
-    kSpace_buffer = np.reshape(kSpace_buffer, -1, order='C')
-    kx_buffer = np.reshape(kx_buffer, -1, order='C')
-    ky_buffer = np.reshape(ky_buffer, -1, order='C')
-    kz_buffer= np.reshape(kz_buffer, -1, order='C')
-    times_buffer = np.reshape(times_buffer, -1, order='C')
-    x_buffer = np.reshape(x_buffer, -1, order='C')*1e-3   # Converting to m
-    y_buffer = np.reshape(y_buffer, -1, order='C')*1e-3   # Converting to m
-    z_buffer= np.reshape(z_buffer, -1, order='C')*1e-3    # Converting to m
-    
-    def pythonfft(kSpace):        
-        img = np.fft.ifftshift(np.fft.ifftn(np.fft.ifftshift(kSpace[:, :, :])))
-        img = np.reshape(img,(1,img.shape[0],img.shape[1],img.shape[2]))
-        img = np.abs(img).astype(np.float32)
-        return img
-    
-    def pythonART():
-        gammabar = 42.57747892*1e6
-
-        signal = kSpace_buffer
-        kx = 2*np.pi*kx_buffer
-        ky = 2*np.pi*ky_buffer
-        kz = 2*np.pi*kz_buffer
-        x = x_buffer
-        y = y_buffer
-        z = z_buffer
-        
-        boFit = eval(f"lambda x, y, z: {BoFit}")
-        # dBo = boFit(vecSign[0]*x, vecSign[1]*y, vecSign[2]*z)
-        dBo = boFit(vecSign[0]*x-vecSign[5]*dfov[0], vecSign[1]*y-vecSign[6]*dfov[1], vecSign[2]*z-vecSign[7]*dfov[2])
-        
-        rho = np.reshape(np.zeros((rNx*rNy*rNz), dtype=complex), (-1, 1))
-        rho = rho[:,0]
-        lbda = 1/float(1)
-        n_iter = int(1)
-        index = np.arange(len(rho))
-
-        kx_gpu = cp.asarray(kx)
-        ky_gpu = cp.asarray(ky)
-        kz_gpu = cp.asarray(kz)
-        sx_gpu = cp.asarray(x)
-        sy_gpu = cp.asarray(y)
-        sz_gpu = cp.asarray(z)
-        signal_gpu = cp.asarray(signal)
-        index_gpu = cp.asarray(index)
-        rho_gpu = cp.asarray(rho)
-        dBo_gpu = cp.asarray(dBo)
-        timeVec = cp.asarray(times_buffer)
-
-        def artPK(kx, ky, kz, x, y, z, s, rho, lbda, n_iter, index, times, dBo):
-                    n = 0
-                    n_samples = len(s)
-                    m = 0
-                    for iteration in range(n_iter):
-                        # cp.random.shuffle(index)
-                        for jj in range(n_samples):
-                            ii = index[jj]
-                            x0 = cp.exp(vecSign[4]*-1j *  (kx[ii] * x + ky[ii] * y + kz[ii] * z + 2 * np.pi * gammabar * times[ii]*dBo))
-                            x1 =  s[ii]-(x0.T @ rho)
-                            # x2 = x1 * cp.conj(x0) / (cp.conj(x0.T) @ x0)
-                            x2 = x1 * cp.conj(x0) / (rNx*rNy*rNz)
-                            d_rho = lbda * x2
-                            rho += d_rho
-                            n += 1
-                            if n / n_samples > 0.01:
-                                m += 1
-                                n = 0
-                                # print("ART iteration %i: %i %%" % (iteration + 1, m))
-
-                    return rho
-        
-        def art(kx, ky, kz, x, y, z, s, rho, lbda, n_iter, index, times, dBo):
-                    n = 0
-                    n_samples = len(s)
-                    m = 0
-                    for iteration in range(n_iter):
-                        # cp.random.shuffle(index)
-                        for jj in range(n_samples):
-                            ii = index[jj]
-                            x0 = cp.exp(vecSign[4]*-1j *  (kx[ii] * x + ky[ii] * y + kz[ii] * z))
-                            x1 =  s[ii]-(x0.T @ rho)
-                            # x2 = x1 * cp.conj(x0) / (cp.conj(x0.T) @ x0)
-                            x2 = x1 * cp.conj(x0) / (rNx*rNy*rNz)
-                            d_rho = lbda * x2
-                            rho += d_rho
-                            n += 1
-                            if n / n_samples > 0.01:
-                                m += 1
-                                n = 0
-                                # print("ART iteration %i: %i %%" % (iteration + 1, m))
-
-                    return rho
-
-        if reconMode == 'artpk':
-            imgART= artPK(kx_gpu,ky_gpu,kz_gpu,sx_gpu,sy_gpu,sz_gpu,signal_gpu, rho_gpu,lbda, n_iter, index_gpu,timeVec, dBo_gpu)
-        elif reconMode == 'art':
-            imgART= art(kx_gpu,ky_gpu,kz_gpu,sx_gpu,sy_gpu,sz_gpu,signal_gpu, rho_gpu,lbda, n_iter, index_gpu,timeVec, dBo_gpu)
-        img = cp.asnumpy(imgART)
-        img = np.reshape(img, (1,nPoints_sig[0],nPoints_sig[1],nPoints_sig[2]))
-        img = np.abs(img).astype(np.float32)
-        return img
-    
-    def pythonCP():
-
-        signal = kSpace_buffer
-        kx = 2*np.pi*kx_buffer
-        ky = 2*np.pi*ky_buffer
-        kz = 2*np.pi*kz_buffer
-
-        x = x_buffer
-        y = y_buffer
-        z = z_buffer
-
-        boFit = eval(f"lambda x, y, z: {BoFit}")
-        dBo = boFit(vecSign[0]*x-vecSign[5]*dfov[0], vecSign[1]*y-vecSign[6]*dfov[1], vecSign[2]*z-vecSign[7]*dfov[2])
-        dBo = dBo/rdGradAmplitude
-    
-        # np.save("toTest/dBo_SH.npy", dBo)
-        # np.save("toTest/nPoints_sig.npy", nPoints_sig)
-        
-        rho = np.reshape(np.zeros((rNx*rNy*rNz), dtype=complex), (-1, 1))
-        rho = rho[:,0]
-
-        kx_gpu = cp.asarray(kx)
-        ky_gpu = cp.asarray(ky)
-        kz_gpu = cp.asarray(kz)
-        sx_gpu = cp.asarray(x)
-        sy_gpu = cp.asarray(y)
-        sz_gpu = cp.asarray(z)
-        signal_gpu = cp.asarray(signal)
-        rho_gpu = cp.asarray(rho)
-        dBo_gpu = cp.asarray(dBo)
-
-        def conjugatePhase(kx, ky, kz, x, y, z, s, rho, dBo):
-            # print('Running conjugate phase...')
-            if cp_batchsize == 0:
-                phase = cp.exp(vecSign[3]*1j * (cp.outer(kx, x) + cp.outer(ky, y) + cp.outer(kz, z)))
-                rho = cp.dot(s, phase)
-            else:
-                for i in range(0, len(x), cp_batchsize):
-                    # if int(i/len(x)*100) != int((i-1)/len(x)*100):
-                        # print(int(i/len(x)*100), ' %')
-                    x_batch = x[i:i+cp_batchsize] + dBo[i:i+cp_batchsize]*rd_dir[0]
-                    y_batch = y[i:i+cp_batchsize] + dBo[i:i+cp_batchsize]*rd_dir[1]
-                    z_batch = z[i:i+cp_batchsize] + dBo[i:i+cp_batchsize]*rd_dir[2]
-
-                    phase_batch = cp.exp(vecSign[3]*1j * (cp.outer(kx, x_batch) + cp.outer(ky, y_batch) + cp.outer(kz, z_batch)))
-                    rho[i:i+cp_batchsize] = cp.dot(s, phase_batch)
-            
-            return rho
-        imgCP= conjugatePhase(kx_gpu,ky_gpu,kz_gpu,sx_gpu,sy_gpu,sz_gpu,signal_gpu, rho_gpu, dBo_gpu)
-        img = cp.asnumpy(imgCP)
-        img = np.reshape(img, (1,nPoints_sig[0],nPoints_sig[1],nPoints_sig[2]))
-        img = np.abs(img).astype(np.float32)
-        return img
-    
-    if reconMode == 'fft':
-        kSpace = np.reshape(kSpace_buffer, [nPoints_sig[0],nPoints_sig[1],nPoints_sig[2]])
-        imgRecon = pythonfft(kSpace)
-    elif reconMode == 'art' or reconMode == 'artpk':
-        imgRecon = pythonART()
-    elif reconMode == 'cp':
-        imgRecon = pythonCP()
-        
-    yield from produce_image(imgRecon)
 
 
-def reconstruct_mrd_stream(reconMode: str, sign:str, BoFit:str,
-                            input: BinaryIO, output: BinaryIO):
-    with mrd.BinaryMrdReader(input) as reader:
-        with mrd.BinaryMrdWriter(output) as writer:
-            head = reader.read_header()
-            if head is None:
-                raise Exception("Could not read header")
-            writer.write_header(head)
-            writer.write_data(
-                stream_item_sink(
-                    mrdRecon(reconMode, sign, BoFit,
-                              head, acquisition_reader(reader.read_data()))))
+def _get_user_double(header, name: str, default=None):
+    up = getattr(header, "user_parameters", None)
+    doubles = getattr(up, "user_parameter_double", None) if up is not None else None
+    if doubles is None:
+        return default
+    for p in doubles:
+        if getattr(p, "name", None) == name:
+            return float(getattr(p, "value", default))
+    return default
+
+
+def _read_header_strings(header):
+    axesOrientation = None
+    dfov = None
+    up = getattr(header, "user_parameters", None)
+    strings = getattr(up, "user_parameter_string", None) if up is not None else None
+    if strings is not None:
+        for p in strings:
+            if p.name == "axesOrientation":
+                axesOrientation = list(map(int, p.value.split(",")))
+            if p.name == "dfov":
+                dfov = list(map(float, p.value.split(",")))
+    return axesOrientation, dfov
+
+
+def _ifft3_cartesian(kspace_sl_ph_rd: np.ndarray) -> np.ndarray:
+    # kspace expected (sl, ph, rd)
+    return np.fft.ifftshift(np.fft.ifftn(np.fft.ifftshift(kspace_sl_ph_rd)))
+
+
+def _run_snraware_inference(td: str, snraware_repo: str, model: str, batch_size: int):
+    pts = os.path.join(snraware_repo, model, f"snraware_{model}_model.pts")
+    yml = os.path.join(snraware_repo, model, f"snraware_{model}_model.yaml")
+    run_py = os.path.join(snraware_repo, "src", "snraware", "projects", "mri", "denoising", "run_inference.py")
+
+    cmd = [
+        "python3", run_py,
+        "--input_dir", td,
+        "--output_dir", td,
+        "--saved_model_path", pts,
+        "--saved_config_path", yml,
+        "--batch_size", str(batch_size),
+        "--input_fname", "input",
+        "--gmap_fname", "gmap",
+    ]
+    #sys.stderr.write("=== SNRAware running... ===\n")
+
+    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+
+    # Siempre escribir el output para poder ver errores
+    if p.stdout:
+        sys.stderr.write("=== SNRAware run_inference output ===\n")
+        sys.stderr.write(p.stdout)
+        sys.stderr.write("=====================================\n")
+        sys.stderr.flush()
+
+    if p.returncode != 0:
+        raise RuntimeError(f"SNRAware run_inference.py falló con code={p.returncode}")
+
+def _snraware_denoise_complex(img_sl_ph_rd: np.ndarray,
+                             noise_std: float,
+                             par_fourier_fraction: float,
+                             model: str,
+                             snraware_repo: str,
+                             batch_size: int) -> np.ndarray:
+    """
+    img_sl_ph_rd: complex (sl, ph, rd)
+    Returns: complex (sl, ph, rd) denoised
+    """
+
+    # SNRAware espera (H,W,F). Aquí: H=ph, W=rd, F=sl
+    img_hwf = np.transpose(img_sl_ph_rd, (1, 2, 0)).astype(np.complex64, copy=False)
+    H, W, F = img_hwf.shape
+
+    # FIEL al experto: N_eff = parFourierFraction * prod(image3D.shape)
+    N_recon = int(np.prod(img_sl_ph_rd.shape))
+    N_eff = float(par_fourier_fraction) * float(N_recon)
+
+    sigma = float(noise_std) / np.sqrt(2.0) / np.sqrt(N_eff)
+    if not np.isfinite(sigma) or sigma <= 0:
+        raise RuntimeError(f"sigma inválida: {sigma} (noise_std={noise_std}, pF={par_fourier_fraction}, N={N_recon})")
+
+    x_snr = img_hwf / sigma
+    gmap = np.ones((H, W), dtype=np.float32)
+
+    with tempfile.TemporaryDirectory(prefix="snraware_io_") as td:
+        np.save(os.path.join(td, "input_real.npy"), np.real(x_snr).astype(np.float32))
+        np.save(os.path.join(td, "input_imag.npy"), np.imag(x_snr).astype(np.float32))
+        np.save(os.path.join(td, "gmap.npy"), gmap)
+
+        _run_snraware_inference(td, snraware_repo=snraware_repo, model=model, batch_size=batch_size)
+
+        # DEBUG: ver qué ficheros generó SNRAware
+        sys.stderr.write(f"[DEBUG] Archivos en {td}: {os.listdir(td)}\n")
+        sys.stderr.flush()
+
+        out_r = np.load(os.path.join(td, "output_real.npy")).astype(np.float32)
+        out_i = np.load(os.path.join(td, "output_imag.npy")).astype(np.float32)
+
+        den_hwf = (out_r + 1j * out_i) * sigma
+        den_sl_ph_rd = np.transpose(den_hwf, (2, 0, 1))  # back (sl, ph, rd)
+
+    return den_sl_ph_rd.astype(np.complex64, copy=False)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+
+    # Mantener compatibilidad con runPythonFit.py / YAML
+    ap.add_argument("--recon", default="fft", choices=["fft"], help="Recon method (only fft supported here)")
+
+    ap.add_argument("-i", "--input", default="-", help="MRD input (default stdin)")
+    ap.add_argument("-o", "--output", default="-", help="MRD output (default stdout)")
+
+    ap.add_argument("--denoise", action="store_true", help="Apply SNRAware denoising after recon")
+    ap.add_argument("--snraware_repo", required=True)
+    ap.add_argument("--snraware_model", default="small", choices=["small", "medium", "large"])
+    ap.add_argument("--batch_size", type=int, default=1)
+    args = ap.parse_args()
+
+    inp = sys.stdin.buffer if args.input == "-" else open(args.input, "rb")
+    out = sys.stdout.buffer if args.output == "-" else open(args.output, "wb")
+
+    with mrd.BinaryMrdReader(inp) as r, mrd.BinaryMrdWriter(out) as w:
+        header = r.read_header()
+
+        parFourierFraction = _get_user_double(header, "parFourierFraction", default=1.0)
+        noise_std = _get_user_double(header, "noise_std", default=None)
+        if noise_std is None:
+            raise RuntimeError("No encuentro 'noise_std' en header.user_parameters.user_parameter_double")
+
+        axesOrientation, _dfov = _read_header_strings(header)
+        if axesOrientation is None:
+            raise RuntimeError("No encuentro 'axesOrientation' en header.user_parameters.user_parameter_string")
+
+        enc0 = header.encoding[0]
+        eNx = int(enc0.encoded_space.matrix_size.x)
+        eNy = int(enc0.encoded_space.matrix_size.y)
+        eNz = int(enc0.encoded_space.matrix_size.z)
+
+        # Derivar n_rd, n_ph, n_sl desde axesOrientation (rd,ph,sl)->(x,y,z)
+        n_rd = eNx if axesOrientation[0] == 0 else (eNy if axesOrientation[0] == 1 else eNz)
+        n_ph = eNx if axesOrientation[1] == 0 else (eNy if axesOrientation[1] == 1 else eNz)
+        n_sl = eNx if axesOrientation[2] == 0 else (eNy if axesOrientation[2] == 1 else eNz)
+
+        kspace = np.zeros((n_sl, n_ph, n_rd), dtype=np.complex64)
+
+        # Leer adquisiciones (en tu writer: idx cuelga de head)
+        for item in r.read_data():
+            if not isinstance(item, mrd.StreamItem.Acquisition):
+                continue
+            acq = item.value
+            line = int(acq.head.idx.kspace_encode_step_1)
+            sl = int(acq.head.idx.kspace_encode_step_2)
+            kspace[sl, line, :] = acq.data[0].astype(np.complex64, copy=False)
+
+        # Recon (solo fft)
+        img_sl_ph_rd = _ifft3_cartesian(kspace)
+
+        # Denoise
+        if args.denoise:
+            img_sl_ph_rd = _snraware_denoise_complex(
+                img_sl_ph_rd=img_sl_ph_rd,
+                noise_std=noise_std,
+                par_fourier_fraction=parFourierFraction,
+                model=args.snraware_model,
+                snraware_repo=args.snraware_repo,
+                batch_size=args.batch_size,
+            )
+
+        # Escribimos imagen magnitude como ImageFloat 4D: (1, sl, ph, rd)
+        img_mag = np.abs(img_sl_ph_rd).astype(np.float32)
+        img_mag4 = img_mag[np.newaxis, ...]
+
+        w.write_header(header)
+
+        im_head = mrd.ImageHeader(image_type=mrd.ImageType.MAGNITUDE)
+        img_mrd = mrd.Image(head=im_head, data=img_mag4)
+        w.write_data([mrd.StreamItem.ImageFloat(img_mrd)])
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Reconstructs an MRD stream")
-    parser.add_argument('-i', '--input', type=str, required=False, help="Input file, defaults to stdin")
-    parser.add_argument('-o', '--output', type=str, required=False, help="Output file, defaults to stdout")
-    parser.add_argument('-r', '--recon', type=str, required=False, help="Reconstruction mode (fft, cp, art, artpk)")
-    parser.add_argument('-s', '--sign', type=str, required=False, help="Signs and others for code generalization [xsignG,ysignG,zsignG,cpPhase,artPhase,dfovx_sign,dfovy_sign,dfovz_sign, cp_batchsize]")
-    parser.add_argument('-BoFit', '--BoFit', type=str, default = False, required=False, help="Bo Fit string")
-    
-    # parser.set_defaults(
-    #     input = 'toTest/Brain_02.10/IR_input.bin', 
-    #     output = 'toTest/Brain_02.10/IR_output.bin',
-    #     recon = 'cp', 
-    #     sign = "[-1,-1,-1,1,1,1,1,1,1000]",
-    #     BoFit = "5.77692881871696e-06 -5.65674399694134e-06*(x**1) -5.3434137581544265e-05*(y**1) -0.00020342945259895645*(z**1) -0.000156251428206156*(x**2) + 0.0008378064122584003*(y**1)*(x**1) -0.0007258991404545351*(z**1)*(x**1) + 0.0036229670725140503*(y**2) -0.001378967166817042*(z**1)*(y**1) -0.003312702469359006*(z**2) + 0.0010325143644071572*(x**3) -0.0014435808182186377*(y**1)*(x**2) + 0.012453972993403974*(z**1)*(x**2) + 0.011113402744183369*(y**2)*(x**1) + 0.0005472920220460564*(z**1)*(y**1)*(x**1) -0.04057580663650256*(z**2)*(x**1) -0.013729443412884824*(y**3) -0.002079919284587098*(z**1)*(y**2) -0.005525394890604233*(z**2)*(y**1) -0.015557500136789144*(z**3) + 0.16987178466397837*(x**4) -0.006487198792338479*(y**1)*(x**3) -0.14871518271529477*(z**1)*(x**3) -0.0882236493311522*(y**2)*(x**2) -0.36172874765413876*(z**1)*(y**1)*(x**2) -0.08966801406021085*(z**2)*(x**2) -0.01896068979161447*(y**3)*(x**1) + 0.1632499115548129*(z**1)*(y**2)*(x**1) + 0.09352430423227343*(z**2)*(y**1)*(x**1) + 0.06808797639756392*(z**3)*(x**1) -0.13475165296871439*(y**4) + 0.15713904971641987*(z**1)*(y**3) -0.015007673376067038*(z**2)*(y**2) -0.030035164405553073*(z**3)*(y**1) + 0.008146668295439696*(z**4) + 0.8965126963564225*(x**5) -0.1505920118662427*(y**1)*(x**4) -1.1452527236869345*(z**1)*(x**4) -2.2418817882169675*(y**2)*(x**3) -1.251520053502328*(z**1)*(y**1)*(x**3) -0.9942462494763136*(z**2)*(x**3) + 1.66695502536605*(y**3)*(x**2) + 2.867005756733836*(z**1)*(y**2)*(x**2) -0.6353237527169453*(z**2)*(y**1)*(x**2) -0.012291232491947175*(z**3)*(x**2) + 0.811499883581874*(y**4)*(x**1) + 0.07041899478694007*(z**1)*(y**3)*(x**1) + 5.842719066585088*(z**2)*(y**2)*(x**1) -1.8802146928449854*(z**3)*(y**1)*(x**1) + 4.880858374882869*(z**4)*(x**1) + 0.01695254801956228*(y**5) + 0.8538164067559773*(z**1)*(y**4) + 3.4432244636068967*(z**2)*(y**3) -1.2100089816044626*(z**3)*(y**2) + 0.03681506132389289*(z**4)*(y**1) + 1.200608969811351*(z**5)"
-    #     )
-    
-    args = parser.parse_args()
-
-    input = open(args.input, "rb") if args.input is not None else sys.stdin.buffer
-    output = open(args.output, "wb") if args.output is not None else sys.stdout.buffer
-
-    reconstruct_mrd_stream(args.recon, args.sign, args.BoFit,
-                            input, output)
+    main()
