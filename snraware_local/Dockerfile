@@ -1,36 +1,53 @@
-# Use a CUDA development image that includes the CUDA toolkit and headers
-FROM nvidia/cuda:11.8.0-devel-ubuntu22.04
 
-# Set environment variables for CUDA
+FROM nvidia/cuda:12.8.0-devel-ubuntu24.04
+
+# Global environment variables
+ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/usr/local/cuda/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH}"
 
-# Update the system and install Python and required tools
-RUN apt-get update && apt-get install -y \
+ENV APP_DIR=/app
+ENV UV_PROJECT_ENVIRONMENT=${APP_DIR}/.venv
+ENV PATH="${APP_DIR}/.venv/bin:${PATH}"
+ENV UV_NO_SYNC=1
+
+# 1. System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
-    python3-pip \
+    python3-dev \
+    python3-venv \
     build-essential \
-    && apt-get clean
+    git \
+    git-lfs \
+    curl \
+    wget \
+    ca-certificates \
+    libgl1 \
+    libglib2.0-0 \
+  && rm -rf /var/lib/apt/lists/*
 
-# Install CuPy with the appropriate CUDA version
-RUN pip3 install cupy-cuda11x
-RUN pip install numpy==1.26.4 scipy==1.10.1 matplotlib==3.7.1 
+# 2. Install uv package manager
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:${PATH}"
 
-# Install mrd-python 
-RUN apt-get update && apt-get install -y --no-install-recommends git \
-    && rm -rf /var/lib/apt/lists/*
+# 3. Copy SNRAware repository and install Python dependencies
+WORKDIR ${APP_DIR}
+COPY SNRAware/ ${APP_DIR}/SNRAware/
 
-RUN python3 -m pip install --upgrade pip setuptools wheel
+WORKDIR ${APP_DIR}/SNRAware
+RUN uv sync --no-dev
 
-RUN git clone https://github.com/ismrmrd/mrd.git /tmp/mrd \
-    && cd /tmp/mrd \
-    && git checkout 0f7684d55cc80d9e69cbe4df21e6a4f3b41515e3 \
-    && python3 -m pip install --no-cache-dir ./python \
-    && rm -rf /tmp/mrd
+# 4. Install additional requirements
+COPY requirements.txt ${APP_DIR}/requirements.txt
+RUN uv pip install --no-cache-dir -r ${APP_DIR}/requirements.txt
 
-# Copy the application code into the container
-WORKDIR /app
-COPY recon_scripts/ /app
+# 5. Copy reconstruction pipeline
+COPY snraware_pipeline/ ${APP_DIR}/snraware_pipeline/
 
-# Set the default command to run the ART script
-CMD ["python3"]
+WORKDIR ${APP_DIR}
+
+# 6. Verify PyTorch and CUDA availability at build time
+RUN python -c "import torch; print('PyTorch:', torch.__version__); \
+               print('CUDA available:', torch.cuda.is_available())"
+
+CMD ["python", "/app/snraware_pipeline/recon_scripts/stream_recon_RARE.py", "-i", "-", "-o", "-"]
