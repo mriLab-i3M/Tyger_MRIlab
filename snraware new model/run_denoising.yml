@@ -1,0 +1,36 @@
+job:
+  codespec:
+    image: acr-proxy.tyger.cloud/tygertepimages.azurecr.io/tinker:c251ff3-cuda-amd64
+ 
+    buffers:
+      inputs:
+        - input
+        - noisecovariance
+      outputs:
+        - recon
+    args:
+      - "vgrappasinglechannel"
+      - "--input"
+      - "$(INPUT_PIPE)"
+      - "--noise.noise-covariance"
+      - "$(NOISECOVARIANCE_PIPE)"
+      - "--output"
+      - "$(RECON_PIPE)"
+      - "--kspace-filter.sigma"
+      - "1.0"
+      - "--denoising.model-file"
+      - "/app/models/denoising/model_219m_with_ellipse_pf.pts"
+      - "--log-level"
+      - "DEBUG"
+      - "--noise.pass-noise-acquisition"
+      - "--denoising.send-out-ori"
+      - "--q-correction.num-noise-readout-required"
+      - "8"
+      - "--q-correction.threshold-to-skip-q-correction"
+      - "1.1"
+      - "--dtype.data-type"
+      - "complex64"
+    resources:
+      requests:
+        cpu: 4
+      gpu: 1
