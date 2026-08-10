@@ -41,7 +41,7 @@ def create_tyger_buffer(tags=None):
             cmd.extend(["--tag", f"{key}={value}"])
     return run_cmd(cmd)
 
-def run_tyger_denoising(path_input_mrd, path_output_mrd):
+def run_tyger_denoising_219(path_input_mrd, path_output_mrd):
     # Create input buffer
     data_id = create_tyger_buffer()
 
@@ -75,6 +75,41 @@ def run_tyger_denoising(path_input_mrd, path_output_mrd):
 
     # Read reconstruction buffer into output MRD
     run_cmd(["tyger", "buffer", "read", recon_id], stdout_file=path_output_mrd)
+
+def run_tyger_denoising_500(path_input_mrd, path_output_mrd):
+    # Create input buffer
+    input_id = create_tyger_buffer()
+
+    # Write the complete input MRD into the Tyger buffer
+    run_cmd(
+        ["tyger", "buffer", "write", input_id],
+        stdin_file=path_input_mrd,
+    )
+
+    # Create reconstruction output buffer
+    recon_id = create_tyger_buffer(
+        tags={
+            "scan_type": "3D",
+            "recon": "uni_recon",
+        }
+    )
+
+    # Run UniRecon
+    run_id = run_cmd([
+        "tyger", "run", "create",
+        "-f", r"run_denoising_500m.yml",
+        "--buffer", f"input={input_id}",
+        "--buffer", f"recon={recon_id}",
+    ])
+
+    print(f"UniRecon run ID: {run_id}")
+
+    # Read reconstruction buffer into the output MRD file
+    run_cmd(
+        ["tyger", "buffer", "read", recon_id],
+        stdout_file=path_output_mrd,
+    )
+
 
 ########################## MaRCoS/MaRGE rawDatas ######################################
 

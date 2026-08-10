@@ -1,0 +1,31 @@
+job:
+  codespec:
+    image: acr-proxy.tyger.cloud/tygertepimages.azurecr.io/tinker:xueh-fix_late_ref_odin_localizer_v2-cuda-20260715
+    buffers:
+      inputs:
+        - input
+      outputs:
+        - recon
+    args:
+      - "odin3dlocalizer" 
+      - "--input"
+      - "$(INPUT_PIPE)"
+      - "--output"
+      - "$(RECON_PIPE)"
+      - "--noise.estimate-inline"
+      - "--kspace-filter.sigma"
+      - "1.0"
+      - "--denoising.model-file"
+      - "/app/models/denoising/model_500m-NN128-ellipse_pf_T-exported.pts"
+      - "--log-level"
+      - "DEBUG"
+      - "--noise.pass-noise-acquisition"
+      - "--denoising.send-out-ori"
+      - "--q-correction.num-noise-readout-required"
+      - "8"
+      - "--q-correction.threshold-to-skip-q-correction"
+      - "1.1"
+    resources:
+      requests:
+        cpu: 4
+      gpu: 1

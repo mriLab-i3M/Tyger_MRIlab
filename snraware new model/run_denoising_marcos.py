@@ -13,6 +13,17 @@ out_field_k = 'kSpace3D_den'
 
 runTyger = 1
 
+# model options 500, 219
+model = 500
+
+if model == 219:
+    out_field += '_219'
+    out_field_k += '_219'
+elif model == 500:
+    out_field += '_500'
+    out_field_k += '_500'
+
+
 ########################### Run Denoising ##################################
 pathMRD_or = pathMAT.replace(".mat", ".mrd")
 pathMRD_ia = pathMAT.replace(".mat", "_ia.mrd")
@@ -25,7 +36,10 @@ if runTyger == 1:
 
     start_time = time.time()
 
-    tf.run_tyger_denoising(pathMRD_or, pathMRD_ia)
+    if model == 219:
+        tf.run_tyger_denoising_219(pathMRD_or, pathMRD_ia)
+    elif model == 500:
+        tf.run_tyger_denoising_500(pathMRD_or, pathMRD_ia)  
 
     tf.exportMAT(pathMRD_ia, pathMAT, out_field, out_field_k)
 
